@@ -9,7 +9,12 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 
 import javax.swing.BoxLayout;
@@ -25,12 +30,19 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.SwingUtilities;
 import javax.swing.border.LineBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import org.apache.pdfbox.exceptions.COSVisitorException;
 import org.apache.pdfbox.util.PDFMergerUtility;
+
+import Viewer.Main;
+
+import com.sun.pdfview.PDFFile;
+import com.sun.pdfview.PDFPage;
+import com.sun.pdfview.PagePanel;
 
 
 public class MainFrame extends JFrame{
@@ -43,6 +55,10 @@ public class MainFrame extends JFrame{
 	ArrayList<String> topicNames;
 	ArrayList<String> currentFilters;
 	ArrayList<QuestionPaper> allPapers;
+	JPanel mainPanel;
+	PagePanel panel;
+	PDFFile pdffile;
+	int currentIndex = 0;
 	
 	public MainFrame(){
 		super("Exam-Pro (Trial)");
@@ -146,7 +162,13 @@ public class MainFrame extends JFrame{
 			
 		});
 		
-		mainPanel();
+		
+		try {
+			mainPanel();
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 		
 		add(bottomPanel, BorderLayout.SOUTH);
 		
@@ -157,9 +179,16 @@ public class MainFrame extends JFrame{
 		setVisible(true);
 	}
 	
-	public void mainPanel(){
-		JPanel mainPanel = new JPanel(new BorderLayout());
+	public void mainPanel() throws IOException{
+		mainPanel = new JPanel(new BorderLayout());
 		add(mainPanel,BorderLayout.CENTER);
+		
+		//Adds PDF Viewer
+		//set up the frame and panel
+        panel = new PagePanel();
+        mainPanel.add(panel,BorderLayout.CENTER);
+        
+		
 		
 		JPanel sidePanel = new JPanel();
 		sidePanel.setPreferredSize(new Dimension(500,110));
@@ -167,7 +196,47 @@ public class MainFrame extends JFrame{
 		sidePanel.setLayout(new BoxLayout(sidePanel, BoxLayout.PAGE_AXIS));
 		
 		mainPanel.add(sidePanel,BorderLayout.WEST);
+		
+		
+		//PDF Page control
+		JPanel jpNavigation = new JPanel();
+		JButton previous = new JButton("Previous");
+		JButton next = new JButton("Next");
+		previous.addActionListener(new ActionListener(){
 
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if(currentIndex > 0){
+				System.out.println("Current index" + currentIndex);
+				currentIndex--;
+				System.out.println("New index" + currentIndex);
+		        PDFPage page = pdffile.getPage(currentIndex);
+		        panel.showPage(page);
+				}
+			}
+			
+		});
+		next.addActionListener(new ActionListener(){
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// show the first page
+				System.out.println("Current index" + currentIndex);
+				currentIndex++;
+				System.out.println("New index" + currentIndex);
+		        PDFPage page = pdffile.getPage(currentIndex);
+		        panel.showPage(page);
+				
+			}
+			
+		});
+		jpNavigation.add(previous);
+		jpNavigation.add(next);
+		jpNavigation.setMaximumSize(new Dimension(300,10));
+		sidePanel.add(jpNavigation);
+		
+		
+		
 		//Filter Panel
 		currentFilters = new ArrayList<String>();
 		JPanel pFilter = new JPanel();
@@ -229,9 +298,18 @@ public class MainFrame extends JFrame{
 		
 		jListAvailable.addMouseListener(new MouseAdapter(){
 			public void mouseClicked(MouseEvent e) {
+				QuestionPaper qp = (QuestionPaper) jListAvailable.getSelectedValue();
 				if (e.getClickCount() == 2) {
-					QuestionPaper qp = (QuestionPaper) jListAvailable.getSelectedValue();
 					lmSelected.addElement(qp);
+				}
+				if(e.getClickCount() == 1){
+					try {
+						setup(qp.getLocation());
+						currentIndex = 0;
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
 				}
 			}
 		});
@@ -293,6 +371,21 @@ public class MainFrame extends JFrame{
 		}
 		}
 	}
+	
+	public void setup(String filepath) throws IOException{
+        //load a pdf from a byte buffer
+        File file = new File(filepath);
+        RandomAccessFile raf = new RandomAccessFile(file, "r");
+        FileChannel channel = raf.getChannel();
+        ByteBuffer buf = channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size());
+        pdffile = new PDFFile(buf);
+
+        // show the first page
+        PDFPage page = pdffile.getPage(0);
+        panel.showPage(page);
+        
+	}
+	
 
 	public static void main(String[] args) {
 		new MainFrame();
