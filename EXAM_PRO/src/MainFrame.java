@@ -2,35 +2,55 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.io.IOException;
 import java.util.ArrayList;
 
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.border.LineBorder;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
+
+import org.apache.pdfbox.exceptions.COSVisitorException;
+import org.apache.pdfbox.util.PDFMergerUtility;
 
 
 public class MainFrame extends JFrame{
 	private static final long serialVersionUID = 1L;
 	DefaultListModel lmAvailable;
+	DefaultListModel lmSelected;
+	JPanel jpTopics;
+	int pressedIndex = 0;
+	int releasedIndex = 0;
+	ArrayList<String> topicNames;
 	
 	public MainFrame(){
 		super("Exam-Pro (Trial)");
 		initUi();
+	}
+	
+	private boolean search(ArrayList<String> array,String input){
+		for(int i = 0;i < array.size();i++){
+			if(array.get(i).equals(input)){
+				return true;
+			}
+			
+		}
+		return false;
 	}
 	
 	private void initUi(){
@@ -44,9 +64,17 @@ public class MainFrame extends JFrame{
 			public void actionPerformed(ActionEvent e) {
 				FileReader fr = new FileReader();
 				ArrayList<QuestionPaper> qpArray = fr.readPapers();
+				topicNames = new ArrayList<String>();
 				for(QuestionPaper qp:qpArray){
 					lmAvailable.addElement(qp);
+					if(!(search(topicNames,qp.getTopicName()))){
+						topicNames.add(qp.getTopicName());
+						JCheckBox temp = new JCheckBox(qp.getTopicName());
+						jpTopics.add(temp);
+					}
 				}
+				
+				setVisible(true);
 				
 			}
 			
@@ -63,6 +91,33 @@ public class MainFrame extends JFrame{
 		bottomPanel.add(jlcreate);
 		bottomPanel.add(jbcreateQP);
 		bottomPanel.add(jbcreateMS);
+		
+		jbcreateQP.addActionListener(new ActionListener(){
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				PDFMergerUtility mu = new PDFMergerUtility();
+				for(int i = 0;i < lmSelected.size();i++){
+					QuestionPaper qp = (QuestionPaper)lmSelected.getElementAt(i);
+					mu.addSource(qp.getLocation());
+				}
+			
+				mu.setDestinationFileName("C:\\Users\\Tahmidul\\Desktop\\MERGED.pdf");
+				JOptionPane.showMessageDialog(null, "PDF Saved to desktop");
+				
+				try {
+					mu.mergeDocuments();
+				} catch (COSVisitorException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+			}
+			
+		});
 		
 		mainPanel();
 		
@@ -90,7 +145,7 @@ public class MainFrame extends JFrame{
 		JPanel pFilter = new JPanel();
 		pFilter.setBorder(new LineBorder(Color.BLACK,3));
 		pFilter.setLayout(new BoxLayout(pFilter, BoxLayout.PAGE_AXIS));
-		JPanel jpYear = new JPanel();
+		JPanel jpYear = new JPanel(new GridLayout(4,4));
 		jpYear.setBorder(new LineBorder(Color.RED,3));
 		jpYear.setPreferredSize(new Dimension(500,5));
 		
@@ -105,9 +160,15 @@ public class MainFrame extends JFrame{
 			jpYear.add(t);
 		}
 		pFilter.add(jpYear);
-		JComboBox jcbTopic = new JComboBox(new String[]{"Transition Metals","Periodicity"});
-		jcbTopic.setFont(new Font("Calibri",Font.BOLD,25));
-		pFilter.add(jcbTopic);
+		jpTopics = new JPanel(new GridLayout(10,3));
+		jpTopics.setBorder(new LineBorder(Color.RED,3));
+		jpTopics.setPreferredSize(new Dimension(500,5));
+		
+		
+		pFilter.add(jpTopics);
+		
+		
+		
 		
 		sidePanel.add(pFilter);
 		//Load question papers from file
@@ -118,28 +179,59 @@ public class MainFrame extends JFrame{
 		JList jListAvailable = new JList(lmAvailable);
 		jListAvailable.setFont(new Font("Calibri",Font.PLAIN,25));
 		jListAvailable.setBorder(new LineBorder(Color.BLACK,3));
-		jListAvailable.addListSelectionListener(new ListSelectionListener(){
-
-			@Override
-			public void valueChanged(ListSelectionEvent e) {
-				QuestionPaper qp = (QuestionPaper) jListAvailable.getSelectedValue();
-				System.out.println(qp.getLocation());
-				
+		
+		jListAvailable.addMouseListener(new MouseAdapter(){
+			public void mouseClicked(MouseEvent e) {
+				if (e.getClickCount() == 2) {
+					QuestionPaper qp = (QuestionPaper) jListAvailable.getSelectedValue();
+					lmSelected.addElement(qp);
+				}
+			}
+		});
+		sidePanel.add(new JScrollPane(jListAvailable));
+		
+		
+		
+		//List of selected question papers
+		lmSelected = new DefaultListModel();
+		JList jListSelected = new JList(lmSelected);
+		jListSelected.addMouseListener(new MouseAdapter(){
+			public void mouseClicked(MouseEvent e) {
+				if (e.getClickCount() == 2) {
+					QuestionPaper qp = (QuestionPaper) jListAvailable.getSelectedValue();
+					lmSelected.removeElement(jListSelected.getSelectedValue());
+				}
 			}
 			
+			public void mousePressed(MouseEvent e){
+				if(e.getClickCount() == 1){
+				pressedIndex = jListSelected.getSelectedIndex();
+				System.out.println(jListSelected.getSelectedIndex());
+				}
+			}
+			
+			public void mouseReleased(MouseEvent e){
+				if(e.getClickCount() == 1){
+				releasedIndex = jListSelected.getSelectedIndex();
+				QuestionPaper temp1 = (QuestionPaper) lmSelected.get(pressedIndex);
+				QuestionPaper temp2 = (QuestionPaper) lmSelected.get(releasedIndex);
+				lmSelected.remove(pressedIndex);
+				lmSelected.add(pressedIndex, temp2);
+				lmSelected.remove(releasedIndex);
+				lmSelected.add(releasedIndex, temp1);
+				}
+				
+				System.out.println("Mouse Released at index "+jListSelected.getSelectedIndex());
+			}
 		});
-		
-		
-		JList jListSelected = new JList(new String[]{"Question 3","Question 4"});
+		jListSelected.setFont(new Font("Calibri",Font.PLAIN,25));
 		jListSelected.setBorder(new LineBorder(Color.BLACK,3));
-
-		sidePanel.add(new JScrollPane(jListAvailable));
+		
 		sidePanel.add(new JScrollPane(jListSelected));
-		
-		
 		sidePanel.setPreferredSize(new Dimension(500,200));
+		
+		
 		pack();
-		//List of selected question papers
 	}
 
 	public static void main(String[] args) {
