@@ -1,6 +1,5 @@
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
@@ -31,9 +30,12 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.SwingConstants;
+import javax.swing.UIManager;
+import javax.swing.UIManager.LookAndFeelInfo;
 import javax.swing.border.LineBorder;
 
 import org.apache.pdfbox.exceptions.COSVisitorException;
+import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.util.PDFMergerUtility;
 
 import com.sun.pdfview.PDFFile;
@@ -55,13 +57,24 @@ public class MainFrame extends JFrame{
 	JPanel mainPanel;
 	PagePanel panel;
 	PDFFile pdffile;
-	int currentIndex = 0;
+	int currentIndex = 1;
 	JLabel jlcurrentPDF;
 	int totalMarks = 0;
 	JLabel jlTotalMarks;
-	
+	JLabel jlPageCount;
+
 	public MainFrame(){
 		super("Exam-Pro (Trial)");
+		try {
+		    for (LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+		        if ("Nimbus".equals(info.getName())) {
+		            UIManager.setLookAndFeel(info.getClassName());
+		            break;
+		        }
+		    }
+		} catch (Exception e) {
+		    // If Nimbus is not available, you can set the GUI to another look and feel.
+		}
 		initUi();
 	}
 	
@@ -228,8 +241,20 @@ public class MainFrame extends JFrame{
 		
 		//Adds PDF Viewer
 		//set up the frame and panel
+		JPanel jpViewer = new JPanel(new BorderLayout());
         panel = new PagePanel();
-        mainPanel.add(panel,BorderLayout.CENTER);
+		jpViewer.add(panel,BorderLayout.CENTER);
+		
+		//PDF Viewer page count
+		jlPageCount = new JLabel("Current Page: "+"0"+"/"+"0");
+		jlPageCount.setBorder(new LineBorder(Color.black,3));
+		jlPageCount.setFont(new Font("Calibri",Font.BOLD,20));
+		jlPageCount.setMaximumSize(new Dimension(700, 500));
+		jlPageCount.setAlignmentX(CENTER_ALIGNMENT);//aligns label itself
+		jlPageCount.setHorizontalAlignment(SwingConstants.CENTER);//aligns text inside the label
+		
+		jpViewer.add(jlPageCount,BorderLayout.SOUTH);
+        mainPanel.add(jpViewer,BorderLayout.CENTER);
         
 		
 		
@@ -249,12 +274,15 @@ public class MainFrame extends JFrame{
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				if(currentIndex > 0){
+				if(currentIndex > 1){
+				int maxCount = pdffile.getNumPages();
 				System.out.println("Current index" + currentIndex);
 				currentIndex--;
 				System.out.println("New index" + currentIndex);
 		        PDFPage page = pdffile.getPage(currentIndex);
 		        panel.showPage(page);
+				jlPageCount.setText("Current Page: "+currentIndex+"/"+maxCount);
+
 				}
 			}
 			
@@ -265,10 +293,13 @@ public class MainFrame extends JFrame{
 			public void actionPerformed(ActionEvent e) {
 				// show the first page
 				System.out.println("Current index" + currentIndex);
+				int maxCount = pdffile.getNumPages();
+				if(currentIndex < maxCount )
 				currentIndex++;
 				System.out.println("New index" + currentIndex);
 		        PDFPage page = pdffile.getPage(currentIndex);
 		        panel.showPage(page);
+				jlPageCount.setText("Current Page: "+currentIndex+"/"+maxCount);
 				
 			}
 			
@@ -369,7 +400,8 @@ public class MainFrame extends JFrame{
 					jlcurrentPDF.setText(qp.toString());
 					try {
 						setup(qp.getLocation());
-						currentIndex = 0;
+						currentIndex = 1;
+						jlPageCount.setText("Current Page: "+currentIndex+"/"+pdffile.getNumPages());
 					} catch (IOException e1) {
 						// TODO Auto-generated catch block
 						e1.printStackTrace();
