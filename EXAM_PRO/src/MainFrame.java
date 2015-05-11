@@ -18,11 +18,13 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 
+import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -164,7 +166,19 @@ public class MainFrame extends JFrame{
 					QuestionPaper qp = (QuestionPaper)lmSelected.getElementAt(i);
 					mu.addSource(qp.getLocation());
 				}
-				mu.setDestinationFileName("C:\\Users\\Tanvirul Islam\\Desktop\\MERGED.pdf");
+				JFileChooser jfcDirectory = new JFileChooser();
+				jfcDirectory.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+				jfcDirectory.setCurrentDirectory(new java.io.File("."));
+				
+				jfcDirectory.setAcceptAllFileFilterUsed(false);
+
+				if(jfcDirectory.showOpenDialog(null) == JFileChooser.APPROVE_OPTION){
+					System.out.println("CURRENT DIREC "+jfcDirectory.getSelectedFile().getPath());
+				
+				mu.setDestinationFileName(jfcDirectory.getSelectedFile().getPath()+"\\MERGED.pdf");
+				}
+				JOptionPane.showMessageDialog(null, "PDF Saved to "+jfcDirectory.getSelectedFile().getPath());
+				
 				JOptionPane.showMessageDialog(null, "PDF Saved to desktop");
 				
 				try {
@@ -193,9 +207,18 @@ public class MainFrame extends JFrame{
 					System.out.println("Mark Scheme : "+filePath);
 					mu.addSource(filePath);
 				}
-			
-				mu.setDestinationFileName("C:\\Users\\Tanvirul Islam\\Desktop\\MarkScheme.pdf");
-				JOptionPane.showMessageDialog(null, "PDF Saved to desktop");
+				JFileChooser jfcDirectory = new JFileChooser();
+				jfcDirectory.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+				jfcDirectory.setCurrentDirectory(new java.io.File("."));
+				
+				jfcDirectory.setAcceptAllFileFilterUsed(false);
+
+				if(jfcDirectory.showOpenDialog(null) == JFileChooser.APPROVE_OPTION){
+					System.out.println("CURRENT DIREC "+jfcDirectory.getSelectedFile().getPath());
+				
+				mu.setDestinationFileName(jfcDirectory.getSelectedFile().getPath()+"\\MARKSCHEME.pdf");
+				}
+				JOptionPane.showMessageDialog(null, "PDF Saved to "+jfcDirectory.getSelectedFile().getPath());
 				
 				try {
 					mu.mergeDocuments();
@@ -248,13 +271,10 @@ public class MainFrame extends JFrame{
         panel = new PagePanel();
 		jpViewer.add(panel,BorderLayout.CENTER);
 		
-		JPanel jpButton = new JPanel();
-		jpButton.setLayout(new BoxLayout(jpButton,BoxLayout.PAGE_AXIS));
+		JPanel jpButton = new JPanel(new BorderLayout());
 		JButton jbNext = new JButton();
 		jbNext.setOpaque(false);
-		
-		
-
+		jbNext.setContentAreaFilled(false);
 		try {
 			URL imgURL = getClass().getResource("/upButton.png");
 		    ImageIcon ii = new ImageIcon(imgURL);
@@ -266,6 +286,7 @@ public class MainFrame extends JFrame{
 		}
 		JButton jbPrev = new JButton();
 		jbPrev.setOpaque(false);
+		jbPrev.setContentAreaFilled(false);
 		try {
 			URL imgURL = getClass().getResource("/downButton.png");
 		    ImageIcon ii = new ImageIcon(imgURL);
@@ -275,8 +296,9 @@ public class MainFrame extends JFrame{
 		} catch (Exception e) {
 			System.out.println("Error reading file");
 		}
-		jpButton.add(jbNext);
-		jpButton.add(jbPrev);
+		jpButton.add(jbNext,BorderLayout.NORTH);
+//		jpButton.add(Box.createRigidArea(new Dimension(5,500)));
+		jpButton.add(jbPrev,BorderLayout.SOUTH);
 		
 		jbNext.addActionListener(new ActionListener(){
 
@@ -436,10 +458,10 @@ public class MainFrame extends JFrame{
 			jpYear.add(t);
 		}
 		pFilter.add(jpYear);
-		jpTopics = new JPanel(new GridLayout(3,2
+		jpTopics = new JPanel(new GridLayout(5,0
 				));
 		jpTopics.setBorder(new LineBorder(Color.BLACK,1));
-		jpTopics.setPreferredSize(new Dimension(500,5));
+		jpTopics.setPreferredSize(new Dimension(500,15));
 		
 		JLabel jlTopic = new JLabel("Topics");
 		jlTopic.setFont(new Font("Calibri",Font.BOLD,20));
@@ -563,7 +585,7 @@ public class MainFrame extends JFrame{
 		for(int i = 0;i < currentFilters.size();i++){
 			for(QuestionPaper qp:allPapers){
 
-				if(qp.getTopicName().contains(currentFilters.get(i))){
+				if(qp.getTopicName().equals(currentFilters.get(i))){
 					lmAvailable.addElement(qp);
 				}
 			}
