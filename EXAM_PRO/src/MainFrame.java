@@ -457,7 +457,7 @@ public class MainFrame extends JFrame{
 			});
 			jpYear.add(t);
 		}
-		pFilter.add(jpYear);
+		pFilter.add(new JScrollPane(jpYear));
 		jpTopics = new JPanel(new GridLayout(5,0
 				));
 		jpTopics.setBorder(new LineBorder(Color.BLACK,1));
@@ -465,11 +465,11 @@ public class MainFrame extends JFrame{
 		
 		JLabel jlTopic = new JLabel("Topics");
 		jlTopic.setFont(new Font("Calibri",Font.BOLD,20));
-		jlTopic.setMaximumSize(new Dimension(700, 500));
+//		jlTopic.setMaximumSize(new Dimension(700, 500));
 		jlTopic.setAlignmentX(CENTER_ALIGNMENT);//aligns label itself
 		jlTopic.setHorizontalAlignment(SwingConstants.CENTER);//aligns text inside the label
 		pFilter.add(jlTopic);
-		pFilter.add(jpTopics);
+		pFilter.add(new JScrollPane(jpTopics));
 		
 		
 		
@@ -558,14 +558,26 @@ public class MainFrame extends JFrame{
 		jListSelected.setBorder(new LineBorder(Color.BLACK,1));
 		
 		JLabel jlSelected = new JLabel("Selected Papers",SwingConstants.LEFT);
+		jlSelected.setBorder(new LineBorder(Color.black,1));
 		jlSelected.setFont(new Font("Calibri",Font.BOLD,20));
 		jlSelected.setMaximumSize(new Dimension(700, 500));
 		jlSelected.setAlignmentX(CENTER_ALIGNMENT);//aligns label itself
 		jlSelected.setHorizontalAlignment(SwingConstants.CENTER);//aligns text inside the label
 		
-		sidePanel.add(jlSelected);
+//		sidePanel.add(jlSelected);
 		
-		sidePanel.add(new JScrollPane(jListSelected));
+//		sidePanel.add(new JScrollPane(jListSelected));
+		//JPANEL FOR RIGHT SIDE
+		JPanel rightPane = new JPanel();
+		rightPane.setLayout(new BoxLayout(rightPane,BoxLayout.PAGE_AXIS));
+		rightPane.add(jlSelected);
+		rightPane.add(new JScrollPane(jListSelected));
+//		mainPanel.add(new JScrollPane(jListSelected),BorderLayout.EAST);
+		mainPanel.add(rightPane,BorderLayout.EAST);
+		rightPane.setPreferredSize(new Dimension(400,200));
+		
+		
+		
 		sidePanel.setPreferredSize(new Dimension(500,200));
 		
 		jlTotalMarks = new JLabel("Total Marks: ");
@@ -585,7 +597,7 @@ public class MainFrame extends JFrame{
 		for(int i = 0;i < currentFilters.size();i++){
 			for(QuestionPaper qp:allPapers){
 
-				if(qp.getTopicName().equals(currentFilters.get(i))){
+				if(qp.getTopicName().replace(" ", "").equals(currentFilters.get(i).replace(" ", ""))){
 					lmAvailable.addElement(qp);
 				}
 			}

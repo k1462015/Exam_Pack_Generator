@@ -26,7 +26,7 @@ public class FileReader {
 //				    		System.out.println("Index :"+i +" with value "+name[i]);
 //				    	}
 				    	qp.setLocation(filePath.toString());
-				    	qp.setYear(name[1]);
+				    	qp.setYear(name[1].replace(" ", ""));
 				    	qp.setQ(name[2]);
 				    	qp.setTopicName(name[3]);
 				    	qp.setTotalMarks(Integer.parseInt(name[4]));
