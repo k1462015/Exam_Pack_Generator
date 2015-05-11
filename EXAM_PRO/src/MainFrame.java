@@ -5,6 +5,8 @@ import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.IOException;
@@ -24,6 +26,8 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.border.LineBorder;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 import org.apache.pdfbox.exceptions.COSVisitorException;
 import org.apache.pdfbox.util.PDFMergerUtility;
@@ -37,6 +41,8 @@ public class MainFrame extends JFrame{
 	int pressedIndex = 0;
 	int releasedIndex = 0;
 	ArrayList<String> topicNames;
+	ArrayList<String> currentFilters;
+	ArrayList<QuestionPaper> allPapers;
 	
 	public MainFrame(){
 		super("Exam-Pro (Trial)");
@@ -54,6 +60,7 @@ public class MainFrame extends JFrame{
 	}
 	
 	private void initUi(){
+		allPapers = new ArrayList<QuestionPaper>();
 		//MenuBar
 		JMenuBar menuBar = new JMenuBar();
 		JMenu file = new JMenu("File");
@@ -63,13 +70,33 @@ public class MainFrame extends JFrame{
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				FileReader fr = new FileReader();
-				ArrayList<QuestionPaper> qpArray = fr.readPapers();
+				allPapers = fr.readPapers();
 				topicNames = new ArrayList<String>();
-				for(QuestionPaper qp:qpArray){
+				for(QuestionPaper qp:allPapers){
 					lmAvailable.addElement(qp);
 					if(!(search(topicNames,qp.getTopicName()))){
 						topicNames.add(qp.getTopicName());
+						currentFilters.add(qp.getTopicName());
 						JCheckBox temp = new JCheckBox(qp.getTopicName());
+						temp.setSelected(true);
+						temp.addItemListener(new ItemListener(){
+
+							@Override
+							public void itemStateChanged(ItemEvent arg0) {
+								if(temp.isSelected()){
+									System.out.println("Topic name added");
+									currentFilters.add(temp.getText());
+									refilter();
+								}else{
+									System.out.println("Topuc name removed");
+									currentFilters.remove(temp.getText());
+									refilter();
+								}
+								
+							}
+							
+						});
+						
 						jpTopics.add(temp);
 					}
 				}
@@ -142,6 +169,7 @@ public class MainFrame extends JFrame{
 		mainPanel.add(sidePanel,BorderLayout.WEST);
 
 		//Filter Panel
+		currentFilters = new ArrayList<String>();
 		JPanel pFilter = new JPanel();
 		pFilter.setBorder(new LineBorder(Color.BLACK,3));
 		pFilter.setLayout(new BoxLayout(pFilter, BoxLayout.PAGE_AXIS));
@@ -156,7 +184,26 @@ public class MainFrame extends JFrame{
 			}else{
 				y = y + i;
 			}
+			currentFilters.add(y);
 			JCheckBox t = new JCheckBox(y);
+			t.setSelected(true);
+
+			t.addItemListener(new ItemListener(){
+				@Override
+				public void itemStateChanged(ItemEvent e) {
+					if(t.isSelected()){
+						System.out.println("Year has been selected");
+						currentFilters.add(t.getText());
+						refilter();
+					}else{
+						System.out.println("Year has been unselected");
+						currentFilters.remove(t.getText());
+						refilter();
+					}
+					
+				}
+				
+			});
 			jpYear.add(t);
 		}
 		pFilter.add(jpYear);
@@ -230,8 +277,21 @@ public class MainFrame extends JFrame{
 		sidePanel.add(new JScrollPane(jListSelected));
 		sidePanel.setPreferredSize(new Dimension(500,200));
 		
-		
 		pack();
+	}
+	
+	public void refilter(){
+		System.out.println("Refiltering");
+		if(allPapers.size() != 0){
+		lmAvailable.removeAllElements();
+		for(int i = 0;i < currentFilters.size();i++){
+			for(QuestionPaper qp:allPapers){
+				if(qp.getTopicName().contains(currentFilters.get(i))){
+					lmAvailable.addElement(qp);
+				}
+			}
+		}
+		}
 	}
 
 	public static void main(String[] args) {
