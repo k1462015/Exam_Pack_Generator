@@ -3,6 +3,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
+import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
@@ -12,12 +13,14 @@ import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
@@ -244,6 +247,76 @@ public class MainFrame extends JFrame{
 		JPanel jpViewer = new JPanel(new BorderLayout());
         panel = new PagePanel();
 		jpViewer.add(panel,BorderLayout.CENTER);
+		
+		JPanel jpButton = new JPanel();
+		jpButton.setLayout(new BoxLayout(jpButton,BoxLayout.PAGE_AXIS));
+		JButton jbNext = new JButton();
+		jbNext.setOpaque(false);
+		
+		
+
+		try {
+			URL imgURL = getClass().getResource("/upButton.png");
+		    ImageIcon ii = new ImageIcon(imgURL);
+		    Image newimg = ii.getImage().getScaledInstance(200, 200,
+					java.awt.Image.SCALE_SMOOTH);
+		    jbNext.setIcon(new ImageIcon(newimg));
+		} catch (Exception e) {
+			System.out.println("Error reading file");
+		}
+		JButton jbPrev = new JButton();
+		jbPrev.setOpaque(false);
+		try {
+			URL imgURL = getClass().getResource("/downButton.png");
+		    ImageIcon ii = new ImageIcon(imgURL);
+		    Image newimg = ii.getImage().getScaledInstance(200, 200,
+					java.awt.Image.SCALE_SMOOTH);
+		    jbPrev.setIcon(new ImageIcon(newimg));
+		} catch (Exception e) {
+			System.out.println("Error reading file");
+		}
+		jpButton.add(jbNext);
+		jpButton.add(jbPrev);
+		
+		jbNext.addActionListener(new ActionListener(){
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+					if(currentIndex > 1){
+					int maxCount = pdffile.getNumPages();
+					System.out.println("Current index" + currentIndex);
+					currentIndex--;
+					System.out.println("New index" + currentIndex);
+			        PDFPage page = pdffile.getPage(currentIndex);
+			        panel.showPage(page);
+					jlPageCount.setText("Current Page: "+currentIndex+"/"+maxCount);
+
+					}
+				
+			}
+			
+		});
+		
+		jbPrev.addActionListener(new ActionListener(){
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				// show the first page
+				System.out.println("Current index" + currentIndex);
+				int maxCount = pdffile.getNumPages();
+				if(currentIndex < maxCount )
+				currentIndex++;
+				System.out.println("New index" + currentIndex);
+		        PDFPage page = pdffile.getPage(currentIndex);
+		        panel.showPage(page);
+				jlPageCount.setText("Current Page: "+currentIndex+"/"+maxCount);
+				
+			}
+			
+		});
+		
+		
+		jpViewer.add(jpButton,BorderLayout.EAST);
 		
 		//PDF Viewer page count
 		jlPageCount = new JLabel("Current Page: "+"0"+"/"+"0");
