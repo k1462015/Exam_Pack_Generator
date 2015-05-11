@@ -18,7 +18,7 @@ public class FileReader {
 			System.out.println(jfcDirectory.getCurrentDirectory());
 			try {
 				Files.walk(Paths.get(jfcDirectory.getCurrentDirectory()+"")).forEach(filePath -> {
-				    if (Files.isRegularFile(filePath) && (filePath+"").contains(".pdf")) {
+				    if (Files.isRegularFile(filePath) && (filePath+"").contains(".pdf") && !(filePath+"").contains("MS")) {
 				    	String[] name = (filePath+"").substring((filePath+"").lastIndexOf("\\")+1, (filePath+"").indexOf(".pdf")).split("_");
 				    	
 				    	QuestionPaper qp = new QuestionPaper();

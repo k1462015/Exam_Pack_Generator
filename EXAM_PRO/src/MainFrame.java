@@ -1,5 +1,6 @@
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
@@ -10,7 +11,6 @@ import java.awt.event.ItemListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -30,15 +30,11 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.SwingUtilities;
+import javax.swing.SwingConstants;
 import javax.swing.border.LineBorder;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 
 import org.apache.pdfbox.exceptions.COSVisitorException;
 import org.apache.pdfbox.util.PDFMergerUtility;
-
-import Viewer.Main;
 
 import com.sun.pdfview.PDFFile;
 import com.sun.pdfview.PDFPage;
@@ -54,11 +50,15 @@ public class MainFrame extends JFrame{
 	int releasedIndex = 0;
 	ArrayList<String> topicNames;
 	ArrayList<String> currentFilters;
+	ArrayList<String> currentFiltersYear;
 	ArrayList<QuestionPaper> allPapers;
 	JPanel mainPanel;
 	PagePanel panel;
 	PDFFile pdffile;
 	int currentIndex = 0;
+	JLabel jlcurrentPDF;
+	int totalMarks = 0;
+	JLabel jlTotalMarks;
 	
 	public MainFrame(){
 		super("Exam-Pro (Trial)");
@@ -94,6 +94,7 @@ public class MainFrame extends JFrame{
 						topicNames.add(qp.getTopicName());
 						currentFilters.add(qp.getTopicName());
 						JCheckBox temp = new JCheckBox(qp.getTopicName());
+						temp.setFont(new Font("Calibri",Font.BOLD,15));
 						temp.setSelected(true);
 						temp.addItemListener(new ItemListener(){
 
@@ -129,8 +130,11 @@ public class MainFrame extends JFrame{
 		//Constructs bottom panels
 		JPanel bottomPanel = new JPanel();
 		JLabel jlcreate = new JLabel("Create:");
+		jlcreate.setFont(new Font("Calibri",Font.BOLD,30));
 		JButton jbcreateQP = new JButton("Question-Paper");
+		jbcreateQP.setFont(new Font("Calibri",Font.BOLD,30));
 		JButton jbcreateMS = new JButton("Mark-Scheme");
+		jbcreateMS.setFont(new Font("Calibri",Font.BOLD,30));
 		bottomPanel.add(jlcreate);
 		bottomPanel.add(jbcreateQP);
 		bottomPanel.add(jbcreateMS);
@@ -144,8 +148,37 @@ public class MainFrame extends JFrame{
 					QuestionPaper qp = (QuestionPaper)lmSelected.getElementAt(i);
 					mu.addSource(qp.getLocation());
 				}
+				mu.setDestinationFileName("C:\\Users\\Tanvirul Islam\\Desktop\\MERGED.pdf");
+				JOptionPane.showMessageDialog(null, "PDF Saved to desktop");
+				
+				try {
+					mu.mergeDocuments();
+				} catch (COSVisitorException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+			}
 			
-				mu.setDestinationFileName("C:\\Users\\Tahmidul\\Desktop\\MERGED.pdf");
+		});
+		//:\Users\Tahmidul\Documents\exam_pro\CHEM5 PDF - Copy\Questions\MS_QP.GETYEAR()_QP.GETQ()
+		jbcreateMS.addActionListener(new ActionListener(){
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				PDFMergerUtility mu = new PDFMergerUtility();
+				for(int i = 0;i < lmSelected.size();i++){
+					QuestionPaper qp = (QuestionPaper)lmSelected.getElementAt(i);
+					System.out.println(qp.getLocation());
+					String filePath = qp.getLocation().substring(0, qp.getLocation().lastIndexOf("Questions\\")) +"Questions\\MS_"+qp.getYear().replace(" ", "")+"_"+qp.getQ()+".pdf";
+					System.out.println("Mark Scheme : "+filePath);
+					mu.addSource(filePath);
+				}
+			
+				mu.setDestinationFileName("C:\\Users\\Tanvirul Islam\\Desktop\\MarkScheme.pdf");
 				JOptionPane.showMessageDialog(null, "PDF Saved to desktop");
 				
 				try {
@@ -181,7 +214,17 @@ public class MainFrame extends JFrame{
 	
 	public void mainPanel() throws IOException{
 		mainPanel = new JPanel(new BorderLayout());
+		mainPanel.setBorder(new LineBorder(Color.BLACK,2));
 		add(mainPanel,BorderLayout.CENTER);
+		
+		//JLabel to show what is currently being shown
+		jlcurrentPDF = new JLabel("No page selected");
+		jlcurrentPDF.setBorder(new LineBorder(Color.black,3));
+		jlcurrentPDF.setFont(new Font("Calibri",Font.BOLD,70));
+		jlcurrentPDF.setMaximumSize(new Dimension(700, 500));
+		jlcurrentPDF.setAlignmentX(CENTER_ALIGNMENT);//aligns label itself
+		jlcurrentPDF.setHorizontalAlignment(SwingConstants.CENTER);//aligns text inside the label
+		mainPanel.add(jlcurrentPDF,BorderLayout.NORTH);
 		
 		//Adds PDF Viewer
 		//set up the frame and panel
@@ -192,7 +235,7 @@ public class MainFrame extends JFrame{
 		
 		JPanel sidePanel = new JPanel();
 		sidePanel.setPreferredSize(new Dimension(500,110));
-		sidePanel.setBorder(new LineBorder(Color.BLUE,3));
+		sidePanel.setBorder(new LineBorder(Color.BLACK,3));
 		sidePanel.setLayout(new BoxLayout(sidePanel, BoxLayout.PAGE_AXIS));
 		
 		mainPanel.add(sidePanel,BorderLayout.WEST);
@@ -235,15 +278,23 @@ public class MainFrame extends JFrame{
 		jpNavigation.setMaximumSize(new Dimension(300,10));
 		sidePanel.add(jpNavigation);
 		
-		
+		//Label for year
+		JLabel j1Year = new JLabel("Year");
+		j1Year.setBorder(new LineBorder(Color.BLACK,1));
+		j1Year.setFont(new Font("Calibri",Font.BOLD,20));
+		j1Year.setMaximumSize(new Dimension(700, 500));
+		j1Year.setAlignmentX(CENTER_ALIGNMENT);//aligns label itself
+		j1Year.setHorizontalAlignment(SwingConstants.CENTER);//aligns text inside the label
+		sidePanel.add(j1Year);
 		
 		//Filter Panel
 		currentFilters = new ArrayList<String>();
+		currentFiltersYear = new ArrayList<String>();
 		JPanel pFilter = new JPanel();
-		pFilter.setBorder(new LineBorder(Color.BLACK,3));
+		pFilter.setBorder(new LineBorder(Color.BLACK,1));
 		pFilter.setLayout(new BoxLayout(pFilter, BoxLayout.PAGE_AXIS));
 		JPanel jpYear = new JPanel(new GridLayout(4,4));
-		jpYear.setBorder(new LineBorder(Color.RED,3));
+		jpYear.setBorder(new LineBorder(Color.BLACK,1));
 		jpYear.setPreferredSize(new Dimension(500,5));
 		
 		for(int i = 0;i < 15;i++){
@@ -253,21 +304,26 @@ public class MainFrame extends JFrame{
 			}else{
 				y = y + i;
 			}
-			currentFilters.add(y);
+			currentFiltersYear.add(y);
 			JCheckBox t = new JCheckBox(y);
 			t.setSelected(true);
 
 			t.addItemListener(new ItemListener(){
 				@Override
 				public void itemStateChanged(ItemEvent e) {
+					System.out.println("Number of years is "+currentFiltersYear.size());
 					if(t.isSelected()){
 						System.out.println("Year has been selected");
-						currentFilters.add(t.getText());
+						currentFiltersYear.add(t.getText());
 						refilter();
+						System.out.println("Number of years after removel "+currentFiltersYear.size());
+
 					}else{
 						System.out.println("Year has been unselected");
-						currentFilters.remove(t.getText());
+						currentFiltersYear.remove(t.getText());
 						refilter();
+						System.out.println("Number of years after removal "+currentFiltersYear.size());
+
 					}
 					
 				}
@@ -276,11 +332,17 @@ public class MainFrame extends JFrame{
 			jpYear.add(t);
 		}
 		pFilter.add(jpYear);
-		jpTopics = new JPanel(new GridLayout(10,3));
-		jpTopics.setBorder(new LineBorder(Color.RED,3));
+		jpTopics = new JPanel(new GridLayout(3,2
+				));
+		jpTopics.setBorder(new LineBorder(Color.BLACK,1));
 		jpTopics.setPreferredSize(new Dimension(500,5));
 		
-		
+		JLabel jlTopic = new JLabel("Topics");
+		jlTopic.setFont(new Font("Calibri",Font.BOLD,20));
+		jlTopic.setMaximumSize(new Dimension(700, 500));
+		jlTopic.setAlignmentX(CENTER_ALIGNMENT);//aligns label itself
+		jlTopic.setHorizontalAlignment(SwingConstants.CENTER);//aligns text inside the label
+		pFilter.add(jlTopic);
 		pFilter.add(jpTopics);
 		
 		
@@ -293,16 +355,18 @@ public class MainFrame extends JFrame{
 		
 		//List of available question papers
 		JList jListAvailable = new JList(lmAvailable);
-		jListAvailable.setFont(new Font("Calibri",Font.PLAIN,25));
-		jListAvailable.setBorder(new LineBorder(Color.BLACK,3));
+		jListAvailable.setFont(new Font("Calibri",Font.PLAIN,20));
+		jListAvailable.setBorder(new LineBorder(Color.BLACK,1));
 		
 		jListAvailable.addMouseListener(new MouseAdapter(){
 			public void mouseClicked(MouseEvent e) {
 				QuestionPaper qp = (QuestionPaper) jListAvailable.getSelectedValue();
 				if (e.getClickCount() == 2) {
 					lmSelected.addElement(qp);
+					checkMarks();
 				}
 				if(e.getClickCount() == 1){
+					jlcurrentPDF.setText(qp.toString());
 					try {
 						setup(qp.getLocation());
 						currentIndex = 0;
@@ -313,6 +377,19 @@ public class MainFrame extends JFrame{
 				}
 			}
 		});
+		JLabel jlAvailable = new JLabel("Available Papers");
+		jlAvailable.setBorder(new LineBorder(Color.BLACK,1));
+		jlAvailable.setFont(new Font("Calibri",Font.BOLD,20));
+		
+		jlAvailable.setMaximumSize(new Dimension(700, 500));
+		jlAvailable.setAlignmentX(CENTER_ALIGNMENT);//aligns label itself
+		jlAvailable.setHorizontalAlignment(SwingConstants.CENTER);//aligns text inside the label
+		
+		
+		
+//		jlAvailable.setVerticalAlignment(SwingConstants.CENTER);
+		
+		sidePanel.add(jlAvailable);
 		sidePanel.add(new JScrollPane(jListAvailable));
 		
 		
@@ -325,6 +402,7 @@ public class MainFrame extends JFrame{
 				if (e.getClickCount() == 2) {
 					QuestionPaper qp = (QuestionPaper) jListAvailable.getSelectedValue();
 					lmSelected.removeElement(jListSelected.getSelectedValue());
+					checkMarks();
 				}
 			}
 			
@@ -349,11 +427,26 @@ public class MainFrame extends JFrame{
 				System.out.println("Mouse Released at index "+jListSelected.getSelectedIndex());
 			}
 		});
-		jListSelected.setFont(new Font("Calibri",Font.PLAIN,25));
-		jListSelected.setBorder(new LineBorder(Color.BLACK,3));
+		jListSelected.setFont(new Font("Calibri",Font.PLAIN,20));
+		jListSelected.setBorder(new LineBorder(Color.BLACK,1));
+		
+		JLabel jlSelected = new JLabel("Selected Papers",SwingConstants.LEFT);
+		jlSelected.setFont(new Font("Calibri",Font.BOLD,20));
+		jlSelected.setMaximumSize(new Dimension(700, 500));
+		jlSelected.setAlignmentX(CENTER_ALIGNMENT);//aligns label itself
+		jlSelected.setHorizontalAlignment(SwingConstants.CENTER);//aligns text inside the label
+		
+		sidePanel.add(jlSelected);
 		
 		sidePanel.add(new JScrollPane(jListSelected));
 		sidePanel.setPreferredSize(new Dimension(500,200));
+		
+		jlTotalMarks = new JLabel("Total Marks: ");
+		jlTotalMarks.setFont(new Font("Calibri",Font.BOLD,20));
+		jlTotalMarks.setMaximumSize(new Dimension(700, 500));
+		jlTotalMarks.setAlignmentX(CENTER_ALIGNMENT);//aligns label itself
+		jlTotalMarks.setHorizontalAlignment(SwingConstants.CENTER);//aligns text inside the label
+		sidePanel.add(jlTotalMarks);
 		
 		pack();
 	}
@@ -364,12 +457,56 @@ public class MainFrame extends JFrame{
 		lmAvailable.removeAllElements();
 		for(int i = 0;i < currentFilters.size();i++){
 			for(QuestionPaper qp:allPapers){
+
 				if(qp.getTopicName().contains(currentFilters.get(i))){
 					lmAvailable.addElement(qp);
 				}
 			}
 		}
+		int tt = 0;
+		while(tt == 0){
+			tt = 1;
+		for(int j = 0; j < lmAvailable.size();j++){
+			QuestionPaper qp = (QuestionPaper) lmAvailable.get(j);
+			System.out.println(qp + " at index "+j);
+			int sYear = Integer.parseInt(qp.getYear().substring(3, 5));
+			String stringYear = "";
+			if(sYear < 10){
+				stringYear = "200"+sYear;
+			}else{
+				stringYear = "20"+sYear;
+			}
+			boolean check = false;
+			for(String yFilter:currentFiltersYear){
+				System.out.println(stringYear+" to match with "+yFilter);
+				if(stringYear.replace(" ", "").equals(yFilter.replace(" ", ""))){
+					System.out.println("MATCHED ");
+					check = true;
+					break;
+				}
+			}
+			
+			if(!check){
+//				System.out.println("Removed "+qp+" AS YEAR IS NOT INCLUDED "+qp.getYear());
+				System.out.println("REMOVED" + qp);
+				lmAvailable.remove(j);
+				tt = 0;
+			}
 		}
+		}
+		
+		
+		}
+	}
+	
+	public void checkMarks(){
+		totalMarks = 0;
+		for(int i = 0; i < lmSelected.getSize();i++){
+			int mark = ((QuestionPaper) lmSelected.getElementAt(i)).getTotalMarks();
+			totalMarks+= mark;
+		}
+		
+		jlTotalMarks.setText("Total Marks: "+totalMarks);
 	}
 	
 	public void setup(String filepath) throws IOException{
