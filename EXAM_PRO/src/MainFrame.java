@@ -18,7 +18,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 
-import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
 import javax.swing.ImageIcon;
@@ -36,11 +35,9 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.SwingConstants;
 import javax.swing.UIManager;
-import javax.swing.UIManager.LookAndFeelInfo;
 import javax.swing.border.LineBorder;
 
 import org.apache.pdfbox.exceptions.COSVisitorException;
-import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.util.PDFMergerUtility;
 
 import com.sun.pdfview.PDFFile;
@@ -155,6 +152,7 @@ public class MainFrame extends JFrame{
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
 				PDFMergerUtility mu = new PDFMergerUtility();
+			
 				for(int i = 0;i < lmSelected.size();i++){
 					QuestionPaper qp = (QuestionPaper)lmSelected.getElementAt(i);
 					mu.addSource(qp.getLocation());
@@ -521,6 +519,8 @@ public class MainFrame extends JFrame{
 			public void mouseClicked(MouseEvent e) {
 				if (e.getClickCount() == 2) {
 					QuestionPaper qp = (QuestionPaper) jListAvailable.getSelectedValue();
+					System.out.println("GENERATING PAGE");
+					new PDFCreatePage().generatePage(qp);
 					lmSelected.removeElement(jListSelected.getSelectedValue());
 					checkMarks();
 				}
