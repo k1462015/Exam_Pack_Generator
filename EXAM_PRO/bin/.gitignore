@@ -1,11 +1,7 @@
-/arrow_button_metal_silver_up.png
-/upButton.png
-/downButton.png.png
+/data/
 /downButton.png
-/MainFrame$10.class
-/MainFrame$9.class
-/Testing.class
-/ReplaceString.class
-/ApachePDFBoxPrinting.class
-/Random.class
-/PDFCreatePage.class
+/guiFrame/
+/pdf/
+/upButton.png
+/paperUP.png
+/paperDown.png
