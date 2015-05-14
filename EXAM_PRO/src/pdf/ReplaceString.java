@@ -122,7 +122,7 @@ public class ReplaceString
 //            }
 //            else
 //            {
-                app.doIt( "C:\\Users\\Tahmidul\\Desktop\\MERGED.PDF","C:\\Users\\Tahmidul\\Desktop\\looool.PDF" , "4", "1" );
+                app.doIt( "C:\\Users\\Tahmidul\\Desktop\\BOWDEE.PDF","C:\\Users\\Tahmidul\\Desktop\\BOWDEE3.PDF" , "ethyl", "lool" );
 //            }
         }
         catch (Exception e)

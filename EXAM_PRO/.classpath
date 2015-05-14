@@ -7,5 +7,12 @@
 	<classpathentry kind="var" path="jPDF"/>
 	<classpathentry kind="var" path="jPDFViewer"/>
 	<classpathentry kind="lib" path="C:/Users/Tahmidul/Desktop/New folder (2)/dist/PDFRenderer-0.9.0.jar"/>
+	<classpathentry kind="var" path="fontbox"/>
+	<classpathentry kind="var" path="preflight-app"/>
+	<classpathentry kind="var" path="jempbox"/>
+	<classpathentry kind="var" path="xmpbox"/>
+	<classpathentry kind="var" path="preflight"/>
+	<classpathentry kind="var" path="PDFRenderer"/>
+	<classpathentry kind="var" path="weblaf"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
