@@ -46,6 +46,7 @@ public class PrintPdf {
 		FileInputStream fis = new FileInputStream(filePath);
 		PrintPdf printPDFFile = new PrintPdf(fis, outputName);
 		printPDFFile.print();
+		System.out.println("PRINTING COMPLETE");
 	}
 
 	/**

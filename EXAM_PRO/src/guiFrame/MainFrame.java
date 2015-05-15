@@ -2,8 +2,11 @@ package guiFrame;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
 import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.Toolkit;
@@ -38,7 +41,6 @@ import javax.swing.DefaultListModel;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -48,6 +50,7 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
@@ -58,11 +61,14 @@ import org.apache.pdfbox.exceptions.COSVisitorException;
 import org.apache.pdfbox.util.PDFMergerUtility;
 
 import pdf.PrintPdf;
+import random.CreateQuestionFront;
 
 import com.sun.pdfview.PDFFile;
 import com.sun.pdfview.PDFPage;
 import com.sun.pdfview.PagePanel;
 
+import data.JListModern;
+import data.PaperReader;
 import data.QuestionPaper;
 
 
@@ -79,17 +85,21 @@ public class MainFrame extends JFrame{
 	ArrayList<String> currentFiltersYear;
 	ArrayList<QuestionPaper> allPapers;
 	JPanel mainPanel,jpYear;
-	PagePanel panel;
-	PDFFile pdffile;
+	PagePanel panel,panelMS,panelExternal;
+	PDFFile pdffile,pdffileMS,pdffileExternal;
 	int currentIndex = 1;
-	JLabel jlcurrentPDF;
+	int currentIndexMS = 1;
+	JLabel jlcurrentPDF,jlcurrentPDFMS;
 	int totalMarks = 0;
 	JLabel jlTotalMarks;
-	JLabel jlPageCount;
+	JLabel jlPageCount,jlPageCountMS;
 	ArrayList<JCheckBox> jcbArrayTopics,jcbArrayYear;
 	JList jListAvailable;
 	JTextField jtfFileName;
 	QuestionPaper qpCurrentlyShowing;
+	boolean showMS;
+	JTabbedPane jtpViewer;
+	JPanel bottomPanel;
 
 	public MainFrame(){
 		super("Exam-Pro (Trial)");
@@ -121,15 +131,19 @@ public class MainFrame extends JFrame{
 		//JMenu to print
 		JMenuBar jmb = new JMenuBar();
 		JMenu jmFile = new JMenu("File");
-		JMenuItem printSelectedPage = new JMenuItem("Print Selected Item");
+		JMenuItem printSelectedPage = new JMenuItem("Print Exam Pack");
 		printSelectedPage.addActionListener(new ActionListener(){
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				int confirm = JOptionPane.showConfirmDialog(null, "Are you sure you want to print?");
 				if(confirm == JOptionPane.YES_OPTION){
+					makeQP(jtfFileName.getText(),false);
+					String qpFilePath = System.getProperty("user.home")+"\\Desktop\\"+jtfFileName.getText()+"\\"+jtfFileName.getText()+"_QP.pdf";
+					String msFilePath = System.getProperty("user.home")+"\\Desktop\\"+jtfFileName.getText()+"\\"+jtfFileName.getText()+"_MS.pdf";
 					try {
-						new PrintPdf().printPDF(qpCurrentlyShowing.getLocation(), qpCurrentlyShowing.toString());
+						new PrintPdf().printPDF(qpFilePath, "QUESTION PAPER");
+						new PrintPdf().printPDF(msFilePath, "MARK SCHEME PAPER");
 					} catch (PrinterException e1) {
 						// TODO Auto-generated catch block
 						e1.printStackTrace();
@@ -150,7 +164,7 @@ public class MainFrame extends JFrame{
 		setJMenuBar(jmb);
 
 		//Constructs bottom panels
-		JPanel bottomPanel = new JPanel();
+		bottomPanel = new JPanel();
 		JLabel jlcreate = new JLabel("Create:");
 		jlcreate.setFont(new Font("Calibri",Font.BOLD,30));
 		bottomPanel.add(jlcreate);
@@ -168,7 +182,7 @@ public class MainFrame extends JFrame{
 
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
-				makeQP(jtfFileName.getText());
+				makeQP(jtfFileName.getText(),true);
 				
 			}
 			
@@ -183,7 +197,7 @@ public class MainFrame extends JFrame{
 		}
 		
 		
-		add(bottomPanel, BorderLayout.SOUTH);
+//		add(bottomPanel, BorderLayout.SOUTH);
 		
 		//Get Size of screen
 		Toolkit tk = Toolkit.getDefaultToolkit();
@@ -192,7 +206,7 @@ public class MainFrame extends JFrame{
 		
 		//Default JFrame Stuff
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
-		setSize(xSize,ySize - 100);
+		setSize(xSize,ySize);
 		setLocationRelativeTo(null);
 		setVisible(true);
 	}
@@ -220,8 +234,9 @@ public class MainFrame extends JFrame{
 	
 	public void leftPane(){
 		JPanel sidePanel = new JPanel();
+		sidePanel.setBackground(Color.WHITE);
 		sidePanel.setPreferredSize(new Dimension(500,110));
-		sidePanel.setBorder(new LineBorder(Color.BLACK,3));
+//		sidePanel.setBorder(new LineBorder(Color.BLACK,3));
 		sidePanel.setLayout(new BoxLayout(sidePanel, BoxLayout.PAGE_AXIS));
 		
 		mainPanel.add(sidePanel,BorderLayout.WEST);
@@ -273,7 +288,6 @@ public class MainFrame extends JFrame{
 		
 		//Label for year
 		JLabel j1Year = new JLabel("Year");
-		j1Year.setBorder(new LineBorder(Color.BLACK,1));
 		j1Year.setFont(new Font("Calibri",Font.BOLD,20));
 		j1Year.setMaximumSize(new Dimension(700, 500));
 		j1Year.setAlignmentX(CENTER_ALIGNMENT);//aligns label itself
@@ -288,7 +302,11 @@ public class MainFrame extends JFrame{
 			public void actionPerformed(ActionEvent e) {
 				for(JCheckBox jcb:jcbArrayYear){
 					jListAvailable.setSelectedIndex(jListAvailable.getSelectedIndex());
-			        panel.requestFocusInWindow();
+					if(jtpViewer.getSelectedIndex() == 0){
+				        panel.requestFocusInWindow();
+					}else{
+				        panelMS.requestFocusInWindow();
+					}
 					System.out.println("Selecting all years");
 					jcb.setSelected(true);
 				}
@@ -303,7 +321,11 @@ public class MainFrame extends JFrame{
 			public void actionPerformed(ActionEvent e) {
 				for(JCheckBox jcb:jcbArrayYear){
 					jListAvailable.setSelectedIndex(jListAvailable.getSelectedIndex());
-			        panel.requestFocusInWindow();
+					if(jtpViewer.getSelectedIndex() == 0){
+				        panel.requestFocusInWindow();
+					}else{
+				        panelMS.requestFocusInWindow();
+					}
 					System.out.println("Selecting all years");
 					jcb.setSelected(false);
 				}
@@ -326,6 +348,7 @@ public class MainFrame extends JFrame{
 		jpYear = new JPanel(new GridLayout(4,2));
 		jpYear.setBorder(new LineBorder(Color.BLACK,1));
 		jpYear.setPreferredSize(new Dimension(500,5));
+		jpYear.setBackground(new Color(228,235,245,215));
 		
 		pFilter.add(new JScrollPane(jpYear));
 		jpTopics = new JPanel(new GridLayout(5,0
@@ -349,7 +372,11 @@ public class MainFrame extends JFrame{
 			public void actionPerformed(ActionEvent e) {
 				for(JCheckBox jcb:jcbArrayTopics){
 					jListAvailable.setSelectedIndex(jListAvailable.getSelectedIndex());
-			        panel.requestFocusInWindow();
+					if(jtpViewer.getSelectedIndex() == 0){
+				        panel.requestFocusInWindow();
+					}else{
+				        panelMS.requestFocusInWindow();
+					}
 					System.out.println("Selecting all years");
 					jcb.setSelected(true);
 				}
@@ -364,7 +391,11 @@ public class MainFrame extends JFrame{
 			public void actionPerformed(ActionEvent e) {
 				for(JCheckBox jcb:jcbArrayTopics){
 					jListAvailable.setSelectedIndex(jListAvailable.getSelectedIndex());
-			        panel.requestFocusInWindow();
+					if(jtpViewer.getSelectedIndex() == 0){
+				        panel.requestFocusInWindow();
+					}else{
+				        panelMS.requestFocusInWindow();
+					}
 					System.out.println("Selecting all years");
 					jcb.setSelected(false);
 				}
@@ -400,9 +431,13 @@ public class MainFrame extends JFrame{
 				if(e.getClickCount() == 1){
 					qpCurrentlyShowing = qp;
 					jlcurrentPDF.setText(qp.toString());
+					jlcurrentPDFMS.setText(qp.toString());
 					setup(qp.getLocation());
+					setupMS(qp.getLocation().substring(0, qp.getLocation().lastIndexOf("Questions\\")) +"Questions\\MS_"+qp.getYear().replace(" ", "")+"_"+qp.getQ()+".pdf");
 					currentIndex = 1;
+					currentIndexMS = 1;
 					jlPageCount.setText("Current Page: "+currentIndex+"/"+pdffile.getNumPages());
+					jlPageCountMS.setText("Current Page: "+currentIndexMS+"/"+pdffileMS.getNumPages());
 					// TODO Auto-generated catch block
 					System.out.println("ERROR SHOWING PDF");
 					
@@ -410,6 +445,7 @@ public class MainFrame extends JFrame{
 			}
 			}
 		});
+		jListAvailable.setCellRenderer(new JListModern());
 		jListAvailable.addKeyListener(new KeyListener(){
 
 			@Override
@@ -417,32 +453,44 @@ public class MainFrame extends JFrame{
 				QuestionPaper qp = (QuestionPaper) jListAvailable.getSelectedValue();
 				if(e.getKeyCode() == KeyEvent.VK_LEFT){
 					System.out.println("LEFT KEY");
-					prevPage();
+					if(jtpViewer.getSelectedIndex() == 1){
+						prevPageMS();
+					}else{
+						prevPage();
+
+					}
 				}
 				if(e.getKeyCode() == KeyEvent.VK_RIGHT){
 					System.out.println("RIGHT KEY");
-					nextPage();
+					if(jtpViewer.getSelectedIndex() == 1){
+						nextPageMS();
+					}else{
+						nextPage();
+					}
 				}
 				if(e.getKeyCode() == KeyEvent.VK_UP || e.getKeyCode() == KeyEvent.VK_DOWN){
-					int currentIndex = jListAvailable.getSelectedIndex();
+					int indexPaper = jListAvailable.getSelectedIndex();
 					if(e.getKeyCode() == KeyEvent.VK_UP){
-						if((currentIndex - 1) < lmAvailable.getSize() && (currentIndex - 1) >= 0){
-						qp = (QuestionPaper) lmAvailable.getElementAt(currentIndex - 1);
+						if((indexPaper - 1) < lmAvailable.getSize() && (indexPaper - 1) >= 0){
+						qp = (QuestionPaper) lmAvailable.getElementAt(indexPaper - 1);
 						}
 					}
 					if(e.getKeyCode() == KeyEvent.VK_DOWN){
-						if((currentIndex + 1) < lmAvailable.getSize() && (currentIndex + 1) >= 0){
-						qp = (QuestionPaper) lmAvailable.getElementAt(currentIndex + 1);
+						if((indexPaper + 1) < lmAvailable.getSize() && (indexPaper + 1) >= 0){
+						qp = (QuestionPaper) lmAvailable.getElementAt(indexPaper + 1);
 						}
 					}
 					qpCurrentlyShowing = qp;
 					System.out.println("PRESSED ARROW UP/DOWN");
 					if(jListAvailable.getSelectedValue() != null){
 					jlcurrentPDF.setText(qp.toString());
+					jlcurrentPDFMS.setText(qp.toString());
 					setup(qp.getLocation());
+					setupMS(qp.getLocation().substring(0, qp.getLocation().lastIndexOf("Questions\\")) +"Questions\\MS_"+qp.getYear().replace(" ", "")+"_"+qp.getQ()+".pdf");
 					currentIndex = 1;
+					currentIndexMS = 1;
 					jlPageCount.setText("Current Page: "+currentIndex+"/"+pdffile.getNumPages());
-					// TODO Auto-generated catch block
+					jlPageCountMS.setText("Current Page: "+currentIndexMS+"/"+pdffileMS.getNumPages());
 					System.out.println("ERROR SHOWING PDF");
 					}
 				}
@@ -474,6 +522,7 @@ public class MainFrame extends JFrame{
 		jlAvailable.setMaximumSize(new Dimension(700, 500));
 		jlAvailable.setAlignmentX(CENTER_ALIGNMENT);//aligns label itself
 		jlAvailable.setHorizontalAlignment(SwingConstants.CENTER);//aligns text inside the label
+
 		
 		
 		
@@ -490,26 +539,22 @@ public class MainFrame extends JFrame{
 		sidePanel.setPreferredSize(new Dimension(600,200));
 	}
 	
-	public void makeQP(String fileName){
-		PDFMergerUtility mu = new PDFMergerUtility();
+	public void makeQP(String fileName,boolean check){
+		new PaperReader().createFolder(fileName);
 		
+		PDFMergerUtility mu = new PDFMergerUtility();
 		for(int i = 0;i < lmSelected.size();i++){
 			QuestionPaper qp = (QuestionPaper)lmSelected.getElementAt(i);
+			try {
+				new CreateQuestionFront().makePaper(qp, i+1,"");
+			} catch (COSVisitorException | IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			mu.addSource(System.getProperty("user.home")+"\\Desktop\\CACHE\\"+(i+1)+".pdf");
 			mu.addSource(qp.getLocation());
-		}
-		JFileChooser jfcDirectory = new JFileChooser();
-		jfcDirectory.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-		jfcDirectory.setCurrentDirectory(new java.io.File("."));
-		
-		jfcDirectory.setAcceptAllFileFilterUsed(false);
-
-		if(jfcDirectory.showOpenDialog(null) == JFileChooser.APPROVE_OPTION){
-			System.out.println("CURRENT DIREC "+jfcDirectory.getSelectedFile().getPath());
-		
-		mu.setDestinationFileName(jfcDirectory.getSelectedFile().getPath()+"\\"+fileName+".pdf");
-		}
-		JOptionPane.showMessageDialog(null, "PDF Saved to "+jfcDirectory.getSelectedFile().getPath());
-		makeMS(fileName,jfcDirectory.getSelectedFile().getPath());
+		}		
+		mu.setDestinationFileName(System.getProperty("user.home")+"\\Desktop\\"+fileName+"\\"+fileName+"_QP.pdf");
 				
 		try {
 			mu.mergeDocuments();
@@ -520,6 +565,15 @@ public class MainFrame extends JFrame{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		makeMS(fileName,System.getProperty("user.home")+"\\Desktop\\"+fileName);
+		if(check){
+			JOptionPane.showMessageDialog(null, "PDF Saved to "+System.getProperty("user.home")+"\\Desktop\\"+fileName);
+
+		}else{
+			JOptionPane.showMessageDialog(null, "EXAM PACK HAS BEEN SENT TO PRINT");
+
+		}
+
 	}
 	
 	public void makeMS(String fileName,String fileDirec){
@@ -529,6 +583,13 @@ public class MainFrame extends JFrame{
 			System.out.println(qp.getLocation());
 			String filePath = qp.getLocation().substring(0, qp.getLocation().lastIndexOf("Questions\\")) +"Questions\\MS_"+qp.getYear().replace(" ", "")+"_"+qp.getQ()+".pdf";
 			System.out.println("Mark Scheme : "+filePath);
+			try {
+				new CreateQuestionFront().makePaper(qp, i+1,"MS");
+			} catch (COSVisitorException | IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			mu.addSource(System.getProperty("user.home")+"\\Desktop\\CACHE\\"+(i+1)+"_MS.pdf");
 			mu.addSource(filePath);
 		}
 		mu.setDestinationFileName(fileDirec+"\\"+fileName+"_MS.pdf");
@@ -627,6 +688,7 @@ public class MainFrame extends JFrame{
 		//List of selected question papers
 		lmSelected = new DefaultListModel();
 		JList jListSelected = new JList(lmSelected);
+		jListSelected.setCellRenderer(new JListModern());
 		jListSelected.setFont(new Font("Calibri",Font.PLAIN,20));
 		jListSelected.setBorder(new LineBorder(Color.BLACK,1));
 		jListSelected.addMouseListener(new MouseAdapter(){
@@ -641,12 +703,20 @@ public class MainFrame extends JFrame{
 				
 				if(e.getClickCount() == 1){
 					qpCurrentlyShowing = qp;
-//			        panel.requestFocusInWindow();
+//					if(jtpViewer.getSelectedIndex() == 0){
+//				        panel.requestFocusInWindow();
+//					}else{
+//				        panelMS.requestFocusInWindow();
+//					}
 					System.out.println("ONE CLICK " +qp);
 					jlcurrentPDF.setText(qp.toString());
+					jlcurrentPDFMS.setText(qp.toString());
 					setup(qp.getLocation());
+					setupMS(qp.getLocation().substring(0, qp.getLocation().lastIndexOf("Questions\\")) +"Questions\\MS_"+qp.getYear().replace(" ", "")+"_"+qp.getQ()+".pdf");
 					currentIndex = 1;
+					currentIndexMS = 1;
 					jlPageCount.setText("Current Page: "+currentIndex+"/"+pdffile.getNumPages());
+					jlPageCountMS.setText("Current Page: "+currentIndexMS+"/"+pdffileMS.getNumPages());
 
 				
 				}
@@ -658,42 +728,54 @@ public class MainFrame extends JFrame{
 
 			@Override
 			public void keyPressed(KeyEvent e) {
+				System.out.println("KEY PRESSED ON JLIST SELECTED");
 				QuestionPaper qp = (QuestionPaper) jListSelected.getSelectedValue();
 				if(e.getKeyCode() == KeyEvent.VK_LEFT){
-					System.out.println("LEFT KEY");
-					prevPage();
-				}
-				if(e.getKeyCode() == KeyEvent.VK_RIGHT){
-					System.out.println("RIGHT KEY");
-					nextPage();
-				}
-				if(e.getKeyCode() == KeyEvent.VK_UP || e.getKeyCode() == KeyEvent.VK_DOWN){
-					
-					System.out.println("PRESSED ARROW UP/DOWN");
-					if(jListSelected.getSelectedValue() != null){
-					int currentIndex = jListSelected.getSelectedIndex();
-						if(e.getKeyCode() == KeyEvent.VK_UP){
-							if((currentIndex - 1) < lmSelected.getSize() && (currentIndex - 1) >= 0){
-							qp = (QuestionPaper) lmSelected.getElementAt(currentIndex - 1);
-							}
-						}
-						if(e.getKeyCode() == KeyEvent.VK_DOWN){
-							if((currentIndex + 1) < lmSelected.getSize() && (currentIndex + 1) >= 0){
-							qp = (QuestionPaper) lmSelected.getElementAt(currentIndex + 1);
-							}
-						}
-						
-						
-					jlcurrentPDF.setText(qp.toString());
-					setup(qp.getLocation());
-					currentIndex = 1;
-					jlPageCount.setText("Current Page: "+currentIndex+"/"+pdffile.getNumPages());
-					// TODO Auto-generated catch block
-					System.out.println("ERROR SHOWING PDF");
-					qpCurrentlyShowing = qp;
+					System.out.println("LEFT KEY FROM JLIST SELECTED");
+					if(jtpViewer.getSelectedIndex() == 1){
+						prevPageMS();
+					}else{
+						prevPage();
 
 					}
 				}
+				if(e.getKeyCode() == KeyEvent.VK_RIGHT){
+					System.out.println("RIGHT KEY FROM JLIST SELECTED");
+					if(jtpViewer.getSelectedIndex() == 1){
+						nextPageMS();
+					}else{
+						nextPage();
+
+					}
+				}
+				
+				if(e.getKeyCode() == KeyEvent.VK_UP || e.getKeyCode() == KeyEvent.VK_DOWN){
+					int indexPaper = jListSelected.getSelectedIndex();
+					if(e.getKeyCode() == KeyEvent.VK_UP){
+						if((indexPaper - 1) < lmSelected.getSize() && (indexPaper - 1) >= 0){
+						qp = (QuestionPaper) lmSelected.getElementAt(indexPaper - 1);
+						}
+					}
+					if(e.getKeyCode() == KeyEvent.VK_DOWN){
+						if((indexPaper + 1) < lmSelected.getSize() && (indexPaper + 1) >= 0){
+						qp = (QuestionPaper) lmSelected.getElementAt(indexPaper + 1);
+						}
+					}
+					qpCurrentlyShowing = qp;
+					System.out.println("PRESSED ARROW UP/DOWN");
+					if(jListSelected.getSelectedValue() != null){
+					jlcurrentPDF.setText(qp.toString());
+					jlcurrentPDFMS.setText(qp.toString());
+					setup(qp.getLocation());
+					setupMS(qp.getLocation().substring(0, qp.getLocation().lastIndexOf("Questions\\")) +"Questions\\MS_"+qp.getYear().replace(" ", "")+"_"+qp.getQ()+".pdf");
+					currentIndex = 1;
+					currentIndexMS = 1;
+					jlPageCount.setText("Current Page: "+currentIndex+"/"+pdffile.getNumPages());
+					jlPageCountMS.setText("Current Page: "+currentIndexMS+"/"+pdffileMS.getNumPages());
+					System.out.println("ERROR SHOWING PDF");
+					}
+				}
+			
 				if(e.getKeyCode() == KeyEvent.VK_DELETE){
 					System.out.println("BACK SPACE PRESSED");
 					if(jListSelected.getSelectedValue() != null){
@@ -725,15 +807,15 @@ public class MainFrame extends JFrame{
 			}
 			
 		});
-		
 
-		
-		
-		
-		
 		
 		JPanel rightPane = new JPanel();
 		rightPane.setLayout(new BoxLayout(rightPane,BoxLayout.PAGE_AXIS));
+		
+		
+		
+		
+		
 		rightPane.add(jlSelected);
 		rightPane.add(new JScrollPane(jListSelected));
 		mainPanel.add(rightPane,BorderLayout.EAST);
@@ -855,6 +937,10 @@ public class MainFrame extends JFrame{
 		jlTotalMarks.setAlignmentX(CENTER_ALIGNMENT);//aligns label itself
 		jlTotalMarks.setHorizontalAlignment(SwingConstants.CENTER);//aligns text inside the label
 		rightPane.add(jlTotalMarks);
+		
+		
+		
+		rightPane.add(bottomPanel);
 	}
 	
 	public Image getImage(String nameOfImage,int x,int y){
@@ -883,25 +969,23 @@ public class MainFrame extends JFrame{
 				}
 			}
 		}
-		int tt = 0;
-
+		ArrayList<Integer> indexes = new ArrayList<Integer>();
+		ArrayList<QuestionPaper> toAddBack = new ArrayList<QuestionPaper>();
+		
 		for(int j = 0; j < lmAvailable.size();j++){
 			QuestionPaper qp = (QuestionPaper) lmAvailable.get(j);
-			boolean check = false;
 			for(String yFilter:currentFiltersYear){
 				System.out.println(qp.getYear()+" to match with "+yFilter);
 				if(qp.getYear().replace(" ", "").equalsIgnoreCase(yFilter.replace(" ", ""))){
 					System.out.println("MATCHED ");
-					check = true;
+					toAddBack.add(qp);
 					break;
 				}
 			}
-			
-			if(!check){
-				System.out.println("REMOVED" + qp);
-				lmAvailable.remove(j);
-				j = 0;
-			}
+		}
+		lmAvailable.removeAllElements();
+		for(QuestionPaper temp:toAddBack){
+			lmAvailable.addElement(temp);
 		}
 		
 		}
@@ -920,16 +1004,201 @@ public class MainFrame extends JFrame{
 	public void addPDFViewerPanel(){
 		//JLabel to show what is currently being shown
 		jlcurrentPDF = new JLabel("No page selected");
-		jlcurrentPDF.setBorder(new LineBorder(Color.black,3));
-		jlcurrentPDF.setFont(new Font("Calibri",Font.BOLD,70));
-		jlcurrentPDF.setMaximumSize(new Dimension(700, 500));
+		jlcurrentPDF.setBorder(new LineBorder(Color.black,1));
+		jlcurrentPDF.setFont(new Font("Calibri",Font.PLAIN,40));
+		jlcurrentPDF.setMaximumSize(new Dimension(700, 50));
 		jlcurrentPDF.setAlignmentX(CENTER_ALIGNMENT);//aligns label itself
 		jlcurrentPDF.setHorizontalAlignment(SwingConstants.CENTER);//aligns text inside the label
-		mainPanel.add(jlcurrentPDF,BorderLayout.NORTH);
 		
-		//Adds PDF Viewer
-		//set up the frame and panel
-		JPanel jpViewer = new JPanel(new BorderLayout());
+		jlcurrentPDFMS = new JLabel("No page selected");
+		jlcurrentPDFMS.setBorder(new LineBorder(Color.black,1));
+		jlcurrentPDFMS.setFont(new Font("Calibri",Font.PLAIN,40));
+		jlcurrentPDFMS.setMaximumSize(new Dimension(700, 50));
+		jlcurrentPDFMS.setAlignmentX(CENTER_ALIGNMENT);//aligns label itself
+		jlcurrentPDFMS.setHorizontalAlignment(SwingConstants.CENTER);//aligns text inside the label
+		
+		
+//		mainPanel.add(jlcurrentPDF,BorderLayout.NORTH);
+		
+		
+		
+		//To hold both the QP and MS viewer
+		jtpViewer = new JTabbedPane();
+		jtpViewer.setFont(new Font("Calibri",Font.BOLD,20));
+		
+		//JPanel for QP and MS PDF VIEWER panel
+		JPanel jpQP = new JPanel(new BorderLayout());
+		JPanel jpMS = new JPanel(new BorderLayout());
+
+		jtpViewer.addTab("Question Paper", jpQP);
+		jtpViewer.addTab("Mark Scheme", jpMS);
+		
+		
+		
+		//MS Paper Viewer
+		JPanel jpViewerMS = new JPanel(new BorderLayout());
+		
+		
+		
+		
+		panelMS = new PagePanel();
+		panelMS.setBorder(new LineBorder(Color.BLUE,3));
+		panelMS.setFocusable(true);
+		panelMS.requestFocusInWindow();
+		panelMS.grabFocus();
+       
+		panelMS.addKeyListener(new KeyListener(){
+
+		@Override
+		public void keyPressed(KeyEvent e) {
+			if(e.getKeyCode() == KeyEvent.VK_LEFT){
+				System.out.println("LEFT KEY");
+				prevPageMS();
+			}
+			if(e.getKeyCode() == KeyEvent.VK_RIGHT){
+				System.out.println("RIGHT KEY");
+				nextPageMS();
+			}
+			setVisible(true);
+		}
+
+		@Override
+		public void keyReleased(KeyEvent e) {
+			
+		}
+
+		@Override
+		public void keyTyped(KeyEvent e) {
+			
+			
+		}
+		
+		});
+		
+		jpViewerMS.add(panelMS,BorderLayout.CENTER);
+		
+		///////////////////COPIED CODE
+		JPanel jpButtonMS = new JPanel();
+		jpButtonMS.setMaximumSize(new Dimension(2000,60));
+		jpButtonMS.setBorder(new LineBorder(Color.black,1));
+		jpButtonMS.setLayout(new BoxLayout(jpButtonMS,BoxLayout.X_AXIS));
+		JButton jbNextMS = new JButton();
+		jbNextMS.setOpaque(false);
+		jbNextMS.setContentAreaFilled(false);
+		jbNextMS.setIcon(new ImageIcon(getImage("/paperLeft.png",60,60)));
+		
+		jbNextMS.setAlignmentX(CENTER_ALIGNMENT);
+		jbNextMS.setHorizontalAlignment(SwingConstants.CENTER);//aligns text inside the label
+		jbNextMS.setMaximumSize(new Dimension(120,60));
+		
+		JButton jbPrevMS = new JButton();
+		jbPrevMS.setOpaque(false);
+		jbPrevMS.setContentAreaFilled(false);
+		jbPrevMS.setIcon(new ImageIcon(getImage("/paperRight.png",60,60)));
+		
+		jbPrevMS.setAlignmentX(CENTER_ALIGNMENT);
+		jbPrevMS.setHorizontalAlignment(SwingConstants.CENTER);//aligns text inside the label
+		jbPrevMS.setMaximumSize(new Dimension(120,60));
+		
+		
+		
+		
+		jbNextMS.addActionListener(new ActionListener(){
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				    jListAvailable.setSelectedIndex(jListAvailable.getSelectedIndex());
+		        	panelMS.requestFocusInWindow();
+					prevPageMS();
+			}
+			
+		});
+		
+		jbPrevMS.addActionListener(new ActionListener(){
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				jListAvailable.setSelectedIndex(jListAvailable.getSelectedIndex());
+		        panelMS.requestFocusInWindow();
+				nextPageMS();
+			}
+			
+		});
+		
+		
+		
+		//PDF Viewer page count
+		jlPageCountMS = new JLabel("Current Page: "+"0"+"/"+"0");
+		jlPageCountMS.setBorder(new LineBorder(Color.black,3));
+		jlPageCountMS.setFont(new Font("Calibri",Font.BOLD,20));
+		jlPageCountMS.setMaximumSize(new Dimension(2000, 500));
+		jlPageCountMS.setAlignmentX(CENTER_ALIGNMENT);//aligns label itself
+		jlPageCountMS.setHorizontalAlignment(SwingConstants.CENTER);//aligns text inside the label
+		
+		
+		JButton printPDFMS = new JButton();
+		printPDFMS.setIcon(new ImageIcon(getImage("/printIcon.png",60,60)));
+		printPDFMS.setFont(new Font("Calibri",Font.BOLD,40));
+		printPDFMS.addActionListener(new ActionListener(){
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				int confirm = JOptionPane.showConfirmDialog(null, "Are you sure you want to print?");
+				if(confirm == JOptionPane.YES_OPTION){
+					try {
+						new PrintPdf().printPDF(qpCurrentlyShowing.getLocation().substring(0, qpCurrentlyShowing.getLocation().lastIndexOf("Questions\\")) +"Questions\\MS_"+qpCurrentlyShowing.getYear().replace(" ", "")+"_"+qpCurrentlyShowing.getQ()+".pdf", qpCurrentlyShowing.toString());
+					} catch (PrinterException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					};
+				}else{
+					System.out.println("PRINT CANCELLED");
+				}
+				
+			}
+			
+		});
+		
+		JButton jbAdobeMS = new JButton();
+		jbAdobeMS.setIcon(new ImageIcon(getImage("/adobeIcon.png",60,60)));
+		jbAdobeMS.addActionListener(new ActionListener(){
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (Desktop.isDesktopSupported()) {
+				    try {
+				        File myFile = new File(qpCurrentlyShowing.getLocation().substring(0, qpCurrentlyShowing.getLocation().lastIndexOf("Questions\\")) +"Questions\\MS_"+qpCurrentlyShowing.getYear().replace(" ", "")+"_"+qpCurrentlyShowing.getQ()+".pdf");
+				        Desktop.getDesktop().open(myFile);
+				    } catch (IOException ex) {
+				        // no application registered for PDFs
+				    }
+				}
+				
+			}
+			
+		});
+//		jpViewer.add(printPDF, BorderLayout.WEST);
+		jpButtonMS.add(printPDFMS);
+		jpButtonMS.add(jbAdobeMS);
+		jpButtonMS.add(Box.createRigidArea(new Dimension(400,60)));
+		jpButtonMS.add(jbNextMS);
+		jpButtonMS.add(jbPrevMS);
+		
+		JPanel jpBottomMS = new JPanel();
+		jpBottomMS.setLayout(new BoxLayout(jpBottomMS,BoxLayout.PAGE_AXIS));
+		jpBottomMS.add(jpButtonMS);
+		jpBottomMS.add(jlPageCountMS);
+		
+		jpViewerMS.add(jpBottomMS,BorderLayout.SOUTH);
+		jpViewerMS.add(jlcurrentPDFMS,BorderLayout.NORTH);
+
+		////////////////////////////////////COPIED CODE
+
+		
+		JPanel jpViewerQP = new JPanel(new BorderLayout());
         panel = new PagePanel();
         panel.setBorder(new LineBorder(Color.BLUE,3));
         panel.setFocusable(true);
@@ -963,28 +1232,29 @@ public class MainFrame extends JFrame{
 		}
 		
 	});
-		jpViewer.add(panel,BorderLayout.CENTER);
+		jpViewerQP.add(panel,BorderLayout.CENTER);
 		
 		JPanel jpButton = new JPanel();
+		jpButton.setMaximumSize(new Dimension(2000,60));
 		jpButton.setBorder(new LineBorder(Color.black,1));
 		jpButton.setLayout(new BoxLayout(jpButton,BoxLayout.X_AXIS));
 		JButton jbNext = new JButton();
 		jbNext.setOpaque(false);
 		jbNext.setContentAreaFilled(false);
-		jbNext.setIcon(new ImageIcon(getImage("/paperLeft.png",100,100)));
+		jbNext.setIcon(new ImageIcon(getImage("/paperLeft.png",60,60)));
 		
 		jbNext.setAlignmentX(CENTER_ALIGNMENT);
 		jbNext.setHorizontalAlignment(SwingConstants.CENTER);//aligns text inside the label
-		jbNext.setMaximumSize(new Dimension(120,100));
+		jbNext.setMaximumSize(new Dimension(120,60));
 		
 		JButton jbPrev = new JButton();
 		jbPrev.setOpaque(false);
 		jbPrev.setContentAreaFilled(false);
-		jbPrev.setIcon(new ImageIcon(getImage("/paperRight.png",100,100)));
+		jbPrev.setIcon(new ImageIcon(getImage("/paperRight.png",60,60)));
 		
 		jbPrev.setAlignmentX(CENTER_ALIGNMENT);
 		jbPrev.setHorizontalAlignment(SwingConstants.CENTER);//aligns text inside the label
-		jbPrev.setMaximumSize(new Dimension(120,100));
+		jbPrev.setMaximumSize(new Dimension(120,60));
 		
 		
 		
@@ -1012,19 +1282,18 @@ public class MainFrame extends JFrame{
 		});
 		
 		
-		jpViewer.add(jpButton,BorderLayout.SOUTH);
 		
 		//PDF Viewer page count
 		jlPageCount = new JLabel("Current Page: "+"0"+"/"+"0");
 		jlPageCount.setBorder(new LineBorder(Color.black,3));
 		jlPageCount.setFont(new Font("Calibri",Font.BOLD,20));
-		jlPageCount.setMaximumSize(new Dimension(700, 500));
+		jlPageCount.setMaximumSize(new Dimension(2000, 500));
 		jlPageCount.setAlignmentX(CENTER_ALIGNMENT);//aligns label itself
 		jlPageCount.setHorizontalAlignment(SwingConstants.CENTER);//aligns text inside the label
 		
 		
 		JButton printPDF = new JButton();
-		printPDF.setIcon(new ImageIcon(getImage("/printIcon.png",80,80)));
+		printPDF.setIcon(new ImageIcon(getImage("/printIcon.png",60,60)));
 		printPDF.setFont(new Font("Calibri",Font.BOLD,40));
 		printPDF.addActionListener(new ActionListener(){
 
@@ -1049,13 +1318,51 @@ public class MainFrame extends JFrame{
 			
 		});
 //		jpViewer.add(printPDF, BorderLayout.WEST);
+		JButton jbAdobe = new JButton();
+		jbAdobe.setIcon(new ImageIcon(getImage("/adobeIcon.png",60,60)));
+		jbAdobe.addActionListener(new ActionListener(){
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (Desktop.isDesktopSupported()) {
+				    try {
+				        File myFile = new File(qpCurrentlyShowing.getLocation());
+				        Desktop.getDesktop().open(myFile);
+				    } catch (IOException ex) {
+				        // no application registered for PDFs
+				    }
+				}
+				
+			}
+			
+		});
+		
+		
+		
+		
+		
 		jpButton.add(printPDF);
-		jpButton.add(Box.createRigidArea(new Dimension(500,0)));
+		jpButton.add(jbAdobe);
+		jpButton.add(Box.createRigidArea(new Dimension(400,60)));
 		jpButton.add(jbNext);
 		jpButton.add(jbPrev);
 		
-		jpViewer.add(jlPageCount,BorderLayout.NORTH);
-        mainPanel.add(jpViewer,BorderLayout.CENTER);
+		JPanel jpBottom = new JPanel();
+		jpBottom.setLayout(new BoxLayout(jpBottom,BoxLayout.PAGE_AXIS));
+		jpBottom.add(jpButton);
+		jpBottom.add(jlPageCount);
+		
+		jpViewerQP.add(jpBottom,BorderLayout.SOUTH);
+		jpViewerQP.add(jlcurrentPDF,BorderLayout.NORTH);
+
+		
+		jpQP.add(jpViewerQP);
+		jpMS.add(jpViewerMS);
+		
+		
+//		jpViewer.add(jlPageCount,BorderLayout.NORTH);
+//        mainPanel.add(jpViewerQP,BorderLayout.CENTER);
+		mainPanel.add(jtpViewer,BorderLayout.CENTER);
 	}
 	
 	public void prevPage(){
@@ -1075,12 +1382,47 @@ public class MainFrame extends JFrame{
 	
 	public void nextPage(){
 		int maxCount = pdffile.getNumPages();
+		System.out.println("CURRENT INDEX IS "+currentIndex+" MAX COUNT IS "+maxCount);
 		if(currentIndex < maxCount ){
 		currentIndex++;
 		System.out.println("New index" + currentIndex);
         PDFPage page = pdffile.getPage(currentIndex);
         panel.showPage(page);
 		jlPageCount.setText("Current Page: "+currentIndex+"/"+maxCount);
+		}else{
+			System.out.println("CAN'T GO NEXT PAGE");
+		}
+		setVisible(true);
+		
+
+	}
+	
+	public void prevPageMS(){
+
+		if(currentIndexMS > 1){
+			int maxCount = pdffileMS.getNumPages();
+			System.out.println("Current index" + currentIndexMS);
+			currentIndexMS--;
+			System.out.println("New index" + currentIndexMS);
+	        PDFPage page = pdffileMS.getPage(currentIndexMS);
+	        panelMS.showPage(page);
+			jlPageCountMS.setText("Current Page: "+currentIndexMS+"/"+maxCount);
+		}
+		setVisible(true);
+
+	}
+	
+	public void nextPageMS(){
+		int maxCount = pdffileMS.getNumPages();
+		System.out.println("CURRENT INDEX IS "+currentIndexMS+" MAX COUNT IS "+maxCount);
+		if(currentIndexMS < maxCount ){
+		currentIndexMS++;
+		System.out.println("New index" + currentIndexMS);
+        PDFPage page = pdffileMS.getPage(currentIndexMS);
+        panelMS.showPage(page);
+		jlPageCountMS.setText("Current Page: "+currentIndexMS+"/"+maxCount);
+		}else{
+			System.out.println("CAN'T GO NEXT PAGE");
 		}
 		setVisible(true);
 		
@@ -1105,10 +1447,79 @@ public class MainFrame extends JFrame{
         
 	}
 	
+	public void setupExternal(String filepath){
+		try{
+        //load a pdf from a byte buffer
+        File file = new File(filepath);
+        RandomAccessFile raf = new RandomAccessFile(file, "r");
+        FileChannel channel = raf.getChannel();
+        ByteBuffer buf = channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size());
+        pdffile = new PDFFile(buf);
+
+        // show the first page
+        PDFPage page = pdffile.getPage(0);
+        panel.showPage(page);
+		}catch(Exception e){
+			System.out.println("ERROR SHOWING PDF");
+		}
+        
+	}
+	
+	public void setupMS(String filepath){
+		try{
+        //load a pdf from a byte buffer
+        File file = new File(filepath);
+        RandomAccessFile raf = new RandomAccessFile(file, "r");
+        FileChannel channel = raf.getChannel();
+        ByteBuffer buf = channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size());
+        pdffileMS = new PDFFile(buf);
+
+        // show the first page
+        PDFPage page = pdffileMS.getPage(0);
+        panelMS.showPage(page);
+		}catch(Exception e){
+			System.out.println("ERROR SHOWING PDF");
+		}
+        
+	}
+	
 
 	public static void main(String[] args) {
+//		showOnScreen(1,new MainFrame());
 		new MainFrame();
+//		new MainFrame();
 
 	}
+	
+	public static void showOnScreen( int screen, JFrame frame ) {
+	    GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+	    GraphicsDevice[] gd = ge.getScreenDevices();
+	    if( screen > -1 && screen < gd.length ) {
+	        frame.setLocation(gd[screen].getDefaultConfiguration().getBounds().x, frame.getY());
+	    } else if( gd.length > 0 ) {
+	        frame.setLocation(gd[0].getDefaultConfiguration().getBounds().x, frame.getY()+400);
+	    } else {
+	        throw new RuntimeException( "No Screens Found" );
+	    }
+	}
+	
+//	public static void showOnScreen( int screen, JFrame frame )
+//	{
+//	    GraphicsEnvironment ge = GraphicsEnvironment
+//	        .getLocalGraphicsEnvironment();
+//	    GraphicsDevice[] gs = ge.getScreenDevices();
+//	    if( screen > -1 && screen < gs.length )
+//	    {
+//	        gs[screen].setFullScreenWindow( frame );
+//	    }
+//	    else if( gs.length > 0 )
+//	    {
+//	        gs[0].setFullScreenWindow( frame );
+//	    }
+//	    else
+//	    {
+//	        throw new RuntimeException( "No Screens Found" );
+//	    }
+//	}
 
 }

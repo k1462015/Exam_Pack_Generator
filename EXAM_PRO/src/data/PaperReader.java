@@ -1,4 +1,5 @@
 package data;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -41,6 +42,11 @@ public class PaperReader {
 			}
 		}
 		return qpArray;
+	}
+	
+	public void createFolder(String nameOfFolder){
+		File dir = new File(System.getProperty("user.home")+"\\Desktop\\"+nameOfFolder);
+		dir.mkdir();
 	}
 
 }
