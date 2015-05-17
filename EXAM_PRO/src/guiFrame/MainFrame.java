@@ -22,6 +22,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.WindowEvent;
 import java.awt.print.PrinterException;
 import java.io.File;
 import java.io.IOException;
@@ -41,12 +42,10 @@ import javax.swing.DefaultListModel;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -54,9 +53,12 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.border.LineBorder;
 
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.apache.pdfbox.exceptions.COSVisitorException;
 import org.apache.pdfbox.util.PDFMergerUtility;
 
@@ -84,8 +86,8 @@ public class MainFrame extends JFrame{
 	ArrayList<String> currentFilters;
 	ArrayList<String> currentFiltersYear;
 	ArrayList<QuestionPaper> allPapers;
-	JPanel mainPanel,jpYear;
-	PagePanel panel,panelMS,panelExternal;
+	JPanel mainPanel,jpYear,sidePanel;
+	PagePanel panel,panelMS,panelExternal,panelExternalMS;
 	PDFFile pdffile,pdffileMS,pdffileExternal;
 	int currentIndex = 1;
 	int currentIndexMS = 1;
@@ -100,6 +102,12 @@ public class MainFrame extends JFrame{
 	boolean showMS;
 	JTabbedPane jtpViewer;
 	JPanel bottomPanel;
+	JFrame externalFrame;
+	JComboBox jcbOptions;
+	Color color1 = Color.LIGHT_GRAY;
+	Color color2 = new Color(217,219,219,189);
+	JCheckBox jcbQP,jcbMS;
+	protected String fp;
 
 	public MainFrame(){
 		super("Exam-Pro (Trial)");
@@ -112,6 +120,8 @@ public class MainFrame extends JFrame{
 		setVisible(true);
 		
 		initUi();
+		setColor();
+		Logger.getRootLogger().setLevel(Level.OFF);
 	}
 	
 	private boolean search(ArrayList<String> array,String input){
@@ -125,25 +135,55 @@ public class MainFrame extends JFrame{
 		return false;
 	}
 	
+	public void setColor(){
+		mainPanel.setBackground(color2);
+	}
+	
 	private void initUi(){
 		allPapers = new ArrayList<QuestionPaper>();
-		
-		//JMenu to print
-		JMenuBar jmb = new JMenuBar();
-		JMenu jmFile = new JMenu("File");
-		JMenuItem printSelectedPage = new JMenuItem("Print Exam Pack");
-		printSelectedPage.addActionListener(new ActionListener(){
+		bottomPanel = new JPanel();
+		JLabel jlcreate = new JLabel("Pack Name:");
+		jlcreate.setFont(new Font("Calibri",Font.BOLD,30));
+		bottomPanel.add(jlcreate);
+
+		jtfFileName = new JTextField();
+		jtfFileName.setText("ENTER NAME OF EXAM PACK");
+		jtfFileName.setPreferredSize(new Dimension(300,50));
+		jtfFileName.setFont(new Font("Calibri",Font.BOLD,20));
+		bottomPanel.add(jtfFileName);
+		bottomPanel.setBackground(color1);
+		JButton jbcreateEP = new JButton("Create");
+		jbcreateEP.setFont(new Font("Calibri",Font.BOLD,30));
+		jbcreateEP.addActionListener(new ActionListener(){
 
 			@Override
-			public void actionPerformed(ActionEvent e) {
+			public void actionPerformed(ActionEvent arg0) {
+				makeQP(jtfFileName.getText(),0);
+				
+			}
+			
+		});
+		bottomPanel.add(jbcreateEP);
+		
+		JButton jbPrintEP = new JButton();
+		jbPrintEP.setIcon(new ImageIcon(getImage("/printIcon.png",40,40)));
+		jbPrintEP.setFont(new Font("Calibri",Font.BOLD,30));
+		jbPrintEP.addActionListener(new ActionListener(){
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
 				int confirm = JOptionPane.showConfirmDialog(null, "Are you sure you want to print?");
 				if(confirm == JOptionPane.YES_OPTION){
-					makeQP(jtfFileName.getText(),false);
+					makeQP(jtfFileName.getText(),true);
 					String qpFilePath = System.getProperty("user.home")+"\\Desktop\\"+jtfFileName.getText()+"\\"+jtfFileName.getText()+"_QP.pdf";
 					String msFilePath = System.getProperty("user.home")+"\\Desktop\\"+jtfFileName.getText()+"\\"+jtfFileName.getText()+"_MS.pdf";
 					try {
-						new PrintPdf().printPDF(qpFilePath, "QUESTION PAPER");
-						new PrintPdf().printPDF(msFilePath, "MARK SCHEME PAPER");
+						if(jcbQP.isSelected()){
+							new PrintPdf().printPDF(qpFilePath, "QUESTION PAPER");
+						}
+						if(jcbMS.isSelected()){
+							new PrintPdf().printPDF(msFilePath, "MARK SCHEME PAPER");
+						}
 					} catch (PrinterException e1) {
 						// TODO Auto-generated catch block
 						e1.printStackTrace();
@@ -155,39 +195,11 @@ public class MainFrame extends JFrame{
 					System.out.println("PRINT CANCELLED");
 				}
 				
-				
 			}
 			
 		});
-		jmFile.add(printSelectedPage);
-		jmb.add(jmFile);
-		setJMenuBar(jmb);
+		bottomPanel.add(jbPrintEP);
 
-		//Constructs bottom panels
-		bottomPanel = new JPanel();
-		JLabel jlcreate = new JLabel("Create:");
-		jlcreate.setFont(new Font("Calibri",Font.BOLD,30));
-		bottomPanel.add(jlcreate);
-
-		jtfFileName = new JTextField();
-		jtfFileName.setText("ENTER NAME OF EXAM PACK");
-		jtfFileName.setPreferredSize(new Dimension(300,50));
-		jtfFileName.setFont(new Font("Calibri",Font.BOLD,20));
-		bottomPanel.add(jtfFileName);
-		JButton jbcreateQP = new JButton("Exam Pack");
-		jbcreateQP.setFont(new Font("Calibri",Font.BOLD,30));
-		bottomPanel.add(jbcreateQP);
-		
-		jbcreateQP.addActionListener(new ActionListener(){
-
-			@Override
-			public void actionPerformed(ActionEvent arg0) {
-				makeQP(jtfFileName.getText(),true);
-				
-			}
-			
-		});
-		
 		
 		try {
 			mainPanel();
@@ -205,8 +217,9 @@ public class MainFrame extends JFrame{
 		int ySize = ((int) tk.getScreenSize().getHeight());
 		
 		//Default JFrame Stuff
+		setBackground(color1);
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
-		setSize(xSize,ySize);
+		setSize(xSize - 100,ySize - 100);
 		setLocationRelativeTo(null);
 		setVisible(true);
 	}
@@ -233,8 +246,8 @@ public class MainFrame extends JFrame{
 	
 	
 	public void leftPane(){
-		JPanel sidePanel = new JPanel();
-		sidePanel.setBackground(Color.WHITE);
+		sidePanel = new JPanel();
+		sidePanel.setOpaque(false);
 		sidePanel.setPreferredSize(new Dimension(500,110));
 //		sidePanel.setBorder(new LineBorder(Color.BLACK,3));
 		sidePanel.setLayout(new BoxLayout(sidePanel, BoxLayout.PAGE_AXIS));
@@ -256,9 +269,11 @@ public class MainFrame extends JFrame{
 		            evt.acceptDrop(DnDConstants.ACTION_COPY);
 		            List<File> droppedFiles = (List<File>)
 		                evt.getTransferable().getTransferData(DataFlavor.javaFileListFlavor);
+		            try{
 		            for (File file : droppedFiles) {
 		            	Files.walk(Paths.get(file.getPath()+"")).forEach(filePath -> {
 						    if (Files.isRegularFile(filePath) && (filePath+"").contains(".pdf") && !(filePath+"").contains("MS")) {
+						    	fp = filePath.toString();
 						    	String[] name = (filePath+"").substring((filePath+"").lastIndexOf("\\")+1, (filePath+"").indexOf(".pdf")).split("_");
 						    	QuestionPaper qp = new QuestionPaper();
 						    	qp.setLocation(filePath.toString());
@@ -268,12 +283,18 @@ public class MainFrame extends JFrame{
 						    	qp.setTotalMarks(Integer.parseInt(name[4]));
 						    	
 						    	qpArray.add(qp);
-						        
 						    }
 						    
 						});
 		               	System.out.println(file.getAbsolutePath());
 		            }
+		            }catch(Exception e){
+						JOptionPane.showMessageDialog(null, "ERROR READING PDF FILES: "+e.getMessage()+"\n"+" "+fp);
+						setVisible(false); //you can't see me!
+						dispose(); //Destroy the JFrame object
+			    		new MainFrame();
+		            }
+		            
 		            
 		            allPapers = qpArray;
 		            addFiles();
@@ -288,6 +309,7 @@ public class MainFrame extends JFrame{
 		
 		//Label for year
 		JLabel j1Year = new JLabel("Year");
+		j1Year.setBackground(color1);
 		j1Year.setFont(new Font("Calibri",Font.BOLD,20));
 		j1Year.setMaximumSize(new Dimension(700, 500));
 		j1Year.setAlignmentX(CENTER_ALIGNMENT);//aligns label itself
@@ -296,6 +318,7 @@ public class MainFrame extends JFrame{
 		
 		//Button to select/de-select all year options
 		JButton jbSelectYear = new JButton("Select All");
+		jbSelectYear.setBackground(color1);
 		jbSelectYear.addActionListener(new ActionListener(){
 
 			@Override
@@ -315,6 +338,7 @@ public class MainFrame extends JFrame{
 		
 		});
 		JButton jbDeselectYear = new JButton("Deselect All");
+		jbDeselectYear.setBackground(color1);
 		jbDeselectYear.addActionListener(new ActionListener(){
 
 			@Override
@@ -334,6 +358,7 @@ public class MainFrame extends JFrame{
 		
 		});
 		JPanel jpSelectYear = new JPanel();
+		jpSelectYear.setOpaque(false);
 		jpSelectYear.add(jbSelectYear);
 		jpSelectYear.add(jbDeselectYear);
 		jpSelectYear.setMaximumSize(new Dimension(200,10));
@@ -343,20 +368,21 @@ public class MainFrame extends JFrame{
 		currentFilters = new ArrayList<String>();
 		currentFiltersYear = new ArrayList<String>();
 		JPanel pFilter = new JPanel();
+		pFilter.setBackground(color1);
 		pFilter.setBorder(new LineBorder(Color.BLACK,1));
 		pFilter.setLayout(new BoxLayout(pFilter, BoxLayout.PAGE_AXIS));
 		jpYear = new JPanel(new GridLayout(4,2));
 		jpYear.setBorder(new LineBorder(Color.BLACK,1));
 		jpYear.setPreferredSize(new Dimension(500,5));
-		jpYear.setBackground(new Color(228,235,245,215));
+		jpYear.setBackground(color1);
 		
 		pFilter.add(new JScrollPane(jpYear));
-		jpTopics = new JPanel(new GridLayout(5,0
-				));
+		jpTopics = new JPanel(new GridLayout(5,0));
 		jpTopics.setBorder(new LineBorder(Color.BLACK,1));
 		jpTopics.setPreferredSize(new Dimension(500,15));
 		
 		JLabel jlTopic = new JLabel("Topics");
+		jlTopic.setBackground(color1);
 		jlTopic.setFont(new Font("Calibri",Font.BOLD,20));
 		jlTopic.setAlignmentX(CENTER_ALIGNMENT);//aligns label itself
 		jlTopic.setHorizontalAlignment(SwingConstants.CENTER);//aligns text inside the label
@@ -366,6 +392,7 @@ public class MainFrame extends JFrame{
 		
 		//Button to select/de-select all TOPIC options
 		JButton jbSelectTopics = new JButton("Select All");
+		jbSelectTopics.setBackground(color1);
 		jbSelectTopics.addActionListener(new ActionListener(){
 
 			@Override
@@ -385,6 +412,7 @@ public class MainFrame extends JFrame{
 		
 		});
 		JButton jbDeselectTopics = new JButton("Deselect All");
+		jbDeselectTopics.setBackground(color2);
 		jbDeselectTopics.addActionListener(new ActionListener(){
 
 			@Override
@@ -404,6 +432,7 @@ public class MainFrame extends JFrame{
 		
 		});
 		JPanel jpSelectTopics = new JPanel();
+		jpSelectTopics.setBackground(color1);
 		jpSelectTopics.add(jbSelectTopics);
 		jpSelectTopics.add(jbDeselectTopics);
 		jpSelectTopics.setMaximumSize(new Dimension(200,10));
@@ -515,19 +544,36 @@ public class MainFrame extends JFrame{
 			}
 			
 		});
-		JLabel jlAvailable = new JLabel("Available Papers");
+		JLabel jlAvailable = new JLabel("Available Questions");
 		jlAvailable.setBorder(new LineBorder(Color.BLACK,1));
 		jlAvailable.setFont(new Font("Calibri",Font.BOLD,20));
 		
 		jlAvailable.setMaximumSize(new Dimension(700, 500));
 		jlAvailable.setAlignmentX(CENTER_ALIGNMENT);//aligns label itself
 		jlAvailable.setHorizontalAlignment(SwingConstants.CENTER);//aligns text inside the label
-
 		
+		JPanel jpAddAll = new JPanel(new BorderLayout());
+		jpAddAll.setMaximumSize(new Dimension(700,20));
+		JButton jbAddAll = new JButton("Add all");
+		jbAddAll.setFont(new Font("Calibri",Font.BOLD,20));
+		jbAddAll.setForeground(Color.red);
+		jbAddAll.addActionListener(new ActionListener(){
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				for(int i = 0;i < lmAvailable.getSize();i++){
+					lmSelected.addElement(lmAvailable.getElementAt(i));
+				}
+				checkMarks();
+			}
+			
+		});
+		jpAddAll.add(jbAddAll,BorderLayout.NORTH);
 		
 		
 		
 		sidePanel.add(jlAvailable);
+		sidePanel.add(jpAddAll);
 		sidePanel.add(new JScrollPane(jListAvailable));
 		
 		
@@ -539,7 +585,7 @@ public class MainFrame extends JFrame{
 		sidePanel.setPreferredSize(new Dimension(600,200));
 	}
 	
-	public void makeQP(String fileName,boolean check){
+	public void makeQP(String fileName,boolean shouldPrint){
 		new PaperReader().createFolder(fileName);
 		
 		PDFMergerUtility mu = new PDFMergerUtility();
@@ -553,6 +599,22 @@ public class MainFrame extends JFrame{
 			}
 			mu.addSource(System.getProperty("user.home")+"\\Desktop\\CACHE\\"+(i+1)+".pdf");
 			mu.addSource(qp.getLocation());
+			try {
+				if(i != (lmSelected.size() - 1)){
+
+				int pageCount = getPageCount(System.getProperty("user.home")+"\\Desktop\\CACHE\\"+(i+1)+".pdf")+
+						getPageCount(qp.getLocation());
+				if((pageCount % 2) == 0){
+					mu.addSource(this.getClass().getResourceAsStream("/blank.pdf"));
+
+//					mu.addSource(System.getProperty("user.home")+"\\Desktop"+"\\blank.pdf");
+				}
+				}
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				JOptionPane.showMessageDialog(null, e.getMessage());
+				e.printStackTrace();
+			}
 		}		
 		mu.setDestinationFileName(System.getProperty("user.home")+"\\Desktop\\"+fileName+"\\"+fileName+"_QP.pdf");
 				
@@ -566,7 +628,7 @@ public class MainFrame extends JFrame{
 			e.printStackTrace();
 		}
 		makeMS(fileName,System.getProperty("user.home")+"\\Desktop\\"+fileName);
-		if(check){
+		if(!shouldPrint){
 			JOptionPane.showMessageDialog(null, "PDF Saved to "+System.getProperty("user.home")+"\\Desktop\\"+fileName);
 
 		}else{
@@ -574,6 +636,77 @@ public class MainFrame extends JFrame{
 
 		}
 
+	}
+	
+	public void makeQP(String fileName,int option){
+		new PaperReader().createFolder(fileName);
+		if(jcbQP.isSelected()){
+			PDFMergerUtility mu = new PDFMergerUtility();
+			for(int i = 0;i < lmSelected.size();i++){
+				QuestionPaper qp = (QuestionPaper)lmSelected.getElementAt(i);
+				try {
+					new CreateQuestionFront().makePaper(qp, i+1,"");
+				} catch (COSVisitorException | IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				mu.addSource(System.getProperty("user.home")+"\\Desktop\\CACHE\\"+(i+1)+".pdf");
+				mu.addSource(qp.getLocation());
+				try {
+					if(i != (lmSelected.size() - 1)){
+
+					int pageCount = getPageCount(System.getProperty("user.home")+"\\Desktop\\CACHE\\"+(i+1)+".pdf")+
+							getPageCount(qp.getLocation());
+					if(!((pageCount % 2) == 0)){
+						mu.addSource(this.getClass().getResourceAsStream("/blank.pdf"));
+//						mu.addSource(System.getProperty("user.home")+"\\Desktop"+"\\blank.pdf");
+					}
+					}
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					JOptionPane.showMessageDialog(null, e.getMessage());
+
+				}
+			}		
+			mu.setDestinationFileName(System.getProperty("user.home")+"\\Desktop\\"+fileName+"\\"+fileName+"_QP.pdf");
+					
+			try {
+				mu.mergeDocuments();
+			} catch (COSVisitorException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			if(jcbMS.isSelected()){
+				makeMS(fileName,System.getProperty("user.home")+"\\Desktop\\"+fileName);
+				JOptionPane.showMessageDialog(null, "Question and MarkScheme Saved to "+System.getProperty("user.home")+"\\Desktop\\"+fileName);
+				
+			}else{
+				JOptionPane.showMessageDialog(null, "Question pack saved to "+System.getProperty("user.home")+"\\Desktop\\"+fileName);
+			}
+			openAdobe(System.getProperty("user.home")+"\\Desktop\\"+fileName+"\\"+fileName+"_QP.pdf");
+		}else{
+			if(jcbMS.isSelected()){
+				makeMS(fileName,System.getProperty("user.home")+"\\Desktop\\"+fileName);
+				JOptionPane.showMessageDialog(null, "MarkScheme Saved to "+System.getProperty("user.home")+"\\Desktop\\"+fileName);
+				openAdobe(System.getProperty("user.home")+"\\Desktop\\"+fileName+"\\"+fileName+"_MS.pdf");
+			}
+		}
+	}
+	
+	public void openAdobe(String filepath){
+		if (Desktop.isDesktopSupported()) {
+		    try {
+		        File myFile = new File(filepath);
+		        Desktop.getDesktop().open(myFile);
+		    } catch (IOException ex) {
+		        // no application registered for PDFs
+		    }
+		}
 	}
 	
 	public void makeMS(String fileName,String fileDirec){
@@ -591,6 +724,21 @@ public class MainFrame extends JFrame{
 			}
 			mu.addSource(System.getProperty("user.home")+"\\Desktop\\CACHE\\"+(i+1)+"_MS.pdf");
 			mu.addSource(filePath);
+			try {
+				if(i != (lmSelected.size() - 1)){
+				int pageCount = getPageCount(System.getProperty("user.home")+"\\Desktop\\CACHE\\"+(i+1)+"_MS.pdf")+
+						getPageCount(filePath);
+				if(!((pageCount % 2) == 0)){
+					mu.addSource(this.getClass().getResourceAsStream("/blank.pdf"));
+
+//					mu.addSource(System.getProperty("user.home")+"\\Desktop"+"\\blank.pdf");
+				}
+				}
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				JOptionPane.showMessageDialog(null, e.getMessage());
+				e.printStackTrace();
+			}
 		}
 		mu.setDestinationFileName(fileDirec+"\\"+fileName+"_MS.pdf");
 				
@@ -603,6 +751,7 @@ public class MainFrame extends JFrame{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+//		openAdobe(fileDirec+"\\"+fileName+"_MS.pdf");
 	}
 	
 	public void addFiles(){
@@ -668,6 +817,7 @@ public class MainFrame extends JFrame{
 				
 			});
 			tempCheck.setSelected(true);
+			tempCheck.setBackground(color1);
 			jcbArrayYear.add(tempCheck);
 			jpYear.add(tempCheck);
 		}
@@ -677,7 +827,8 @@ public class MainFrame extends JFrame{
 	
 	public void rightPane(){
 		//JPANEL FOR RIGHT SIDE
-		JLabel jlSelected = new JLabel("Selected Papers",SwingConstants.LEFT);
+		JLabel jlSelected = new JLabel("Selected Questions",SwingConstants.LEFT);
+		jlSelected.setBackground(color1);
 		jlSelected.setBorder(new LineBorder(Color.black,1));
 		jlSelected.setFont(new Font("Calibri",Font.BOLD,20));
 		jlSelected.setMaximumSize(new Dimension(700, 500));
@@ -688,6 +839,7 @@ public class MainFrame extends JFrame{
 		//List of selected question papers
 		lmSelected = new DefaultListModel();
 		JList jListSelected = new JList(lmSelected);
+		jListSelected.setBackground(color2);
 		jListSelected.setCellRenderer(new JListModern());
 		jListSelected.setFont(new Font("Calibri",Font.PLAIN,20));
 		jListSelected.setBorder(new LineBorder(Color.BLACK,1));
@@ -703,11 +855,6 @@ public class MainFrame extends JFrame{
 				
 				if(e.getClickCount() == 1){
 					qpCurrentlyShowing = qp;
-//					if(jtpViewer.getSelectedIndex() == 0){
-//				        panel.requestFocusInWindow();
-//					}else{
-//				        panelMS.requestFocusInWindow();
-//					}
 					System.out.println("ONE CLICK " +qp);
 					jlcurrentPDF.setText(qp.toString());
 					jlcurrentPDFMS.setText(qp.toString());
@@ -811,8 +958,7 @@ public class MainFrame extends JFrame{
 		
 		JPanel rightPane = new JPanel();
 		rightPane.setLayout(new BoxLayout(rightPane,BoxLayout.PAGE_AXIS));
-		
-		
+		rightPane.setBackground(color1);
 		
 		
 		
@@ -824,6 +970,7 @@ public class MainFrame extends JFrame{
 		
 		//JPanel for re-arranging selected papers
 		JPanel jpRearrange = new JPanel();
+		jpRearrange.setBackground(color1);
 		jpRearrange.setBorder(new LineBorder(Color.black,1));
 		jpRearrange.setAlignmentX(CENTER_ALIGNMENT);
 		jpRearrange.setMaximumSize(new Dimension(500,40));
@@ -914,6 +1061,7 @@ public class MainFrame extends JFrame{
 
 		
 		JButton clearSelection = new JButton("Clear Selection");
+		clearSelection.setBackground(color1);
 		clearSelection.setFont(new Font("Calibri",Font.BOLD,20));
 		clearSelection.setForeground(Color.red);
 		clearSelection.setAlignmentX(CENTER_ALIGNMENT);
@@ -924,13 +1072,14 @@ public class MainFrame extends JFrame{
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
 				lmSelected.removeAllElements();
-				
+				checkMarks();
 			}
 			
 		});
 		rightPane.add(clearSelection);
 		
 		jlTotalMarks = new JLabel("Total Marks: ");
+		jlTotalMarks.setBackground(color1);
 		jlTotalMarks.setBorder(new LineBorder(Color.black,1));
 		jlTotalMarks.setFont(new Font("Calibri",Font.BOLD,20));
 		jlTotalMarks.setMaximumSize(new Dimension(700, 500));
@@ -938,8 +1087,38 @@ public class MainFrame extends JFrame{
 		jlTotalMarks.setHorizontalAlignment(SwingConstants.CENTER);//aligns text inside the label
 		rightPane.add(jlTotalMarks);
 		
+//		JPanel jpOptions = new JPanel(new BorderLayout());
+		JPanel jpOptions = new JPanel();
+
+		jpOptions.setOpaque(false);
+		jpOptions.setMaximumSize(new Dimension(700,20));
+		JLabel jlOptions = new JLabel("Options: ");
+		jlOptions.setOpaque(false);
+		jlOptions.setFont(new Font("Calibri",Font.BOLD,20));
+//		jcbOptions = new JComboBox(new String[]{"Questions","Mark Scheme","Question and Mark Scheme"});
+//		jcbOptions.setFont(new Font("Calibri",Font.BOLD,20));
+//		jpOptions.add(jlOptions,BorderLayout.WEST);
+//		jpOptions.add(jcbOptions,BorderLayout.CENTER);
+		
+		jcbQP = new JCheckBox("Question Paper");
+		jcbQP.setFont(new Font("Calibri",Font.PLAIN,20));
+		jcbQP.setOpaque(false);
+		jcbMS = new JCheckBox("Mark Scheme");
+		jcbMS.setOpaque(false);
+		jcbMS.setFont(new Font("Calibri",Font.PLAIN,20));
+
+		
+		jpOptions.add(jlOptions);
+		jpOptions.add(jcbQP);
+		jpOptions.add(jcbMS);
 		
 		
+		
+		
+		
+		
+		rightPane.setBackground(color1);
+		rightPane.add(jpOptions);
 		rightPane.add(bottomPanel);
 	}
 	
@@ -1039,6 +1218,16 @@ public class MainFrame extends JFrame{
 		JPanel jpViewerMS = new JPanel(new BorderLayout());
 		
 		
+		
+		
+		//FOR EXTERNAL VIEWER
+		panelExternal = new PagePanel();
+		panelExternal.setBorder(new LineBorder(Color.BLUE,3));
+		panelExternalMS = new PagePanel();
+		panelExternalMS.setBorder(new LineBorder(Color.BLUE,3));
+		
+		
+		///////
 		
 		
 		panelMS = new PagePanel();
@@ -1180,9 +1369,42 @@ public class MainFrame extends JFrame{
 			}
 			
 		});
+		
+		//External JFrame
+		externalFrame = new JFrame();
+		JTabbedPane jtbExternal = new JTabbedPane();
+		jtbExternal.setFont(new Font("Calibri",Font.BOLD,20));
+		jtbExternal.addTab("Question Paper", panelExternal);
+		jtbExternal.addTab("Mark Scheme", panelExternalMS);
+		externalFrame.add(jtbExternal);
+		externalFrame.setSize(700,1200);	
+		
+		JButton jbExternalPDFMS = new JButton();
+		jbExternalPDFMS.setIcon(new ImageIcon(getImage("/ExternalIcon.png", 60, 60)));
+		
+		
+		jbExternalPDFMS.addActionListener(new ActionListener(){
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if(externalFrame.isVisible()){
+					externalFrame.setVisible(false);
+				}else{
+					externalFrame.setVisible(true);
+				}
+				SwingUtilities.updateComponentTreeUI(panelExternal);
+				SwingUtilities.updateComponentTreeUI(panelExternalMS);
+				
+			}
+			
+		});
+		
+		
+		
 //		jpViewer.add(printPDF, BorderLayout.WEST);
 		jpButtonMS.add(printPDFMS);
 		jpButtonMS.add(jbAdobeMS);
+		jpButtonMS.add(jbExternalPDFMS);
 		jpButtonMS.add(Box.createRigidArea(new Dimension(400,60)));
 		jpButtonMS.add(jbNextMS);
 		jpButtonMS.add(jbPrevMS);
@@ -1337,12 +1559,32 @@ public class MainFrame extends JFrame{
 			
 		});
 		
+		//External JFrame
+		JButton jbExternalPDF = new JButton();
+		jbExternalPDF.setIcon(new ImageIcon(getImage("/ExternalIcon.png", 60, 60)));
+		
+		
+		jbExternalPDF.addActionListener(new ActionListener(){
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if(externalFrame.isVisible()){
+					externalFrame.setVisible(false);
+				}else{
+					externalFrame.setVisible(true);
+				}
+				SwingUtilities.updateComponentTreeUI(panelExternal);
+				SwingUtilities.updateComponentTreeUI(panelExternalMS);
+			}
+			
+		});
 		
 		
 		
 		
 		jpButton.add(printPDF);
 		jpButton.add(jbAdobe);
+		jpButton.add(jbExternalPDF);
 		jpButton.add(Box.createRigidArea(new Dimension(400,60)));
 		jpButton.add(jbNext);
 		jpButton.add(jbPrev);
@@ -1374,6 +1616,7 @@ public class MainFrame extends JFrame{
 			System.out.println("New index" + currentIndex);
 	        PDFPage page = pdffile.getPage(currentIndex);
 	        panel.showPage(page);
+	        panelExternal.showPage(page);
 			jlPageCount.setText("Current Page: "+currentIndex+"/"+maxCount);
 		}
 		setVisible(true);
@@ -1388,6 +1631,7 @@ public class MainFrame extends JFrame{
 		System.out.println("New index" + currentIndex);
         PDFPage page = pdffile.getPage(currentIndex);
         panel.showPage(page);
+        panelExternal.showPage(page);
 		jlPageCount.setText("Current Page: "+currentIndex+"/"+maxCount);
 		}else{
 			System.out.println("CAN'T GO NEXT PAGE");
@@ -1406,6 +1650,7 @@ public class MainFrame extends JFrame{
 			System.out.println("New index" + currentIndexMS);
 	        PDFPage page = pdffileMS.getPage(currentIndexMS);
 	        panelMS.showPage(page);
+	        panelExternalMS.showPage(page);
 			jlPageCountMS.setText("Current Page: "+currentIndexMS+"/"+maxCount);
 		}
 		setVisible(true);
@@ -1420,6 +1665,7 @@ public class MainFrame extends JFrame{
 		System.out.println("New index" + currentIndexMS);
         PDFPage page = pdffileMS.getPage(currentIndexMS);
         panelMS.showPage(page);
+        panelExternalMS.showPage(page);
 		jlPageCountMS.setText("Current Page: "+currentIndexMS+"/"+maxCount);
 		}else{
 			System.out.println("CAN'T GO NEXT PAGE");
@@ -1441,29 +1687,25 @@ public class MainFrame extends JFrame{
         // show the first page
         PDFPage page = pdffile.getPage(0);
         panel.showPage(page);
+        panelExternal.showPage(page);
+        
 		}catch(Exception e){
 			System.out.println("ERROR SHOWING PDF");
 		}
         
 	}
 	
-	public void setupExternal(String filepath){
-		try{
-        //load a pdf from a byte buffer
-        File file = new File(filepath);
-        RandomAccessFile raf = new RandomAccessFile(file, "r");
-        FileChannel channel = raf.getChannel();
-        ByteBuffer buf = channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size());
-        pdffile = new PDFFile(buf);
-
-        // show the first page
-        PDFPage page = pdffile.getPage(0);
-        panel.showPage(page);
-		}catch(Exception e){
-			System.out.println("ERROR SHOWING PDF");
-		}
-        
+	public int getPageCount(String filepath) throws IOException{
+	        //load a pdf from a byte buffer
+	        File file = new File(filepath);
+	        RandomAccessFile raf = new RandomAccessFile(file, "r");
+	        FileChannel channel = raf.getChannel();
+	        ByteBuffer buf = channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size());
+	        PDFFile pfile = new PDFFile(buf);
+	        return pfile.getNumPages();
+	       
 	}
+	
 	
 	public void setupMS(String filepath){
 		try{
@@ -1477,6 +1719,7 @@ public class MainFrame extends JFrame{
         // show the first page
         PDFPage page = pdffileMS.getPage(0);
         panelMS.showPage(page);
+        panelExternalMS.showPage(page);
 		}catch(Exception e){
 			System.out.println("ERROR SHOWING PDF");
 		}

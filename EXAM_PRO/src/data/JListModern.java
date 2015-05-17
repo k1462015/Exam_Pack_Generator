@@ -20,7 +20,7 @@ public class JListModern extends JLabel implements ListCellRenderer<Object> {
                                                   boolean isSelected,
                                                   boolean cellHasFocus) {
 
-        setText(value.toString());
+        setText((index+1) +". "+value.toString());
         setFont(new Font("Calibri",Font.BOLD,20));
         Color background;
         Color foreground;
@@ -37,7 +37,7 @@ public class JListModern extends JLabel implements ListCellRenderer<Object> {
         // check if this cell is selected
         } else if (isSelected) {
             background = Color.ORANGE;
-            foreground = Color.WHITE;
+            foreground = Color.BLACK;
 
         // unselected, and not the DnD drop location
         } else {
@@ -54,7 +54,7 @@ public class JListModern extends JLabel implements ListCellRenderer<Object> {
 
         setBackground(background);
         setForeground(foreground);
-
+        
         return this;
     }
 

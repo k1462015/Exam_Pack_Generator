@@ -25,6 +25,7 @@ public class CreateQuestionFront {
 	}
 
 	public static void makePaper(QuestionPaper qp,int n,String ms) throws IOException, COSVisitorException {
+//		String outputFileName = getClass().getResource("/blank.pdf").getPath();
 		String outputFileName = System.getProperty("user.home")+"\\Desktop\\CACHE\\"+n+".pdf";
 		if(ms.equals("MS")){
 			outputFileName = System.getProperty("user.home")+"\\Desktop\\CACHE\\"+n+"_MS.pdf";
