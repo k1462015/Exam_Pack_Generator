@@ -106,7 +106,7 @@ public class MainFrame extends JFrame{
 	JComboBox jcbOptions;
 	Color color1 = Color.LIGHT_GRAY;
 	Color color2 = new Color(217,219,219,189);
-	JCheckBox jcbQP,jcbMS;
+	JCheckBox jcbQP,jcbMS,jcbER;
 	protected String fp;
 
 	public MainFrame(){
@@ -120,7 +120,7 @@ public class MainFrame extends JFrame{
 		setVisible(true);
 		
 		initUi();
-		setColor();
+//		setColor();
 		Logger.getRootLogger().setLevel(Level.OFF);
 	}
 	
@@ -158,8 +158,33 @@ public class MainFrame extends JFrame{
 
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
-				makeQP(jtfFileName.getText(),0);
+				try {
+					makePaper(jtfFileName.getText());
+					JOptionPane.showMessageDialog(null, "Exam Pack saved to desktop");
+				} catch (COSVisitorException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					JOptionPane.showMessageDialog(null, "Problem creating Exam Pack "+"\n"+e.getMessage());
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					JOptionPane.showMessageDialog(null, "Problem creating Exam Pack "+"\n"+e.getMessage());
+				} catch(Exception e){
+					JOptionPane.showMessageDialog(null, "Problem creating Exam Pack "+"\n"+e.getMessage());
+				}
 				
+				int confirm = JOptionPane.showConfirmDialog(null, "Would you like to open the exam pack in Adobe??");
+				if(confirm == JOptionPane.YES_OPTION){
+				if(jcbQP.isSelected()){
+					openAdobe(getEPPath(jtfFileName.getText(),"QP"));
+				}
+				if(jcbMS.isSelected()){
+					openAdobe(getEPPath(jtfFileName.getText(),"MS"));
+				}
+				if(jcbER.isSelected()){
+					openAdobe(getEPPath(jtfFileName.getText(),"ER"));
+				}
+				}
 			}
 			
 		});
@@ -174,23 +199,37 @@ public class MainFrame extends JFrame{
 			public void actionPerformed(ActionEvent arg0) {
 				int confirm = JOptionPane.showConfirmDialog(null, "Are you sure you want to print?");
 				if(confirm == JOptionPane.YES_OPTION){
-					makeQP(jtfFileName.getText(),true);
-					String qpFilePath = System.getProperty("user.home")+"\\Desktop\\"+jtfFileName.getText()+"\\"+jtfFileName.getText()+"_QP.pdf";
-					String msFilePath = System.getProperty("user.home")+"\\Desktop\\"+jtfFileName.getText()+"\\"+jtfFileName.getText()+"_MS.pdf";
+					
+					//First creates paper in a temp place
 					try {
+						makePaper("CACHE");
+					} catch (COSVisitorException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+						JOptionPane.showMessageDialog(null, "Error creating pack from files that are required to print: \n"+e.getMessage());
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+						JOptionPane.showMessageDialog(null, "Error creating pack from files that are required to print: \n"+e.getMessage());
+					}
+					catch(Exception e){
+						JOptionPane.showMessageDialog(null, "Error creating pack from files that are required to print: \n"+e.getMessage());
+					}
+					PrintPdf print = new PrintPdf();
+					try{
 						if(jcbQP.isSelected()){
-							new PrintPdf().printPDF(qpFilePath, "QUESTION PAPER");
+							print.printPDF(getEPPath("CACHE","QP"), "Question Paper");
 						}
 						if(jcbMS.isSelected()){
-							new PrintPdf().printPDF(msFilePath, "MARK SCHEME PAPER");
+							print.printPDF(getEPPath("CACHE","MS"), "Mark Scheme");
 						}
-					} catch (PrinterException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					} catch (IOException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					};
+						if(jcbER.isSelected()){
+							print.printPDF(getEPPath("CACHE","ER"), "Examiners Report");
+						}
+					}catch(Exception e){
+						JOptionPane.showMessageDialog(null, "Error Printing: \n"+e.getMessage());
+					}
+					
 				}else{
 					System.out.println("PRINT CANCELLED");
 				}
@@ -209,7 +248,6 @@ public class MainFrame extends JFrame{
 		}
 		
 		
-//		add(bottomPanel, BorderLayout.SOUTH);
 		
 		//Get Size of screen
 		Toolkit tk = Toolkit.getDefaultToolkit();
@@ -217,7 +255,7 @@ public class MainFrame extends JFrame{
 		int ySize = ((int) tk.getScreenSize().getHeight());
 		
 		//Default JFrame Stuff
-		setBackground(color1);
+//		setBackground(color1);
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
 		setSize(xSize - 100,ySize - 100);
 		setLocationRelativeTo(null);
@@ -247,7 +285,6 @@ public class MainFrame extends JFrame{
 	
 	public void leftPane(){
 		sidePanel = new JPanel();
-		sidePanel.setOpaque(false);
 		sidePanel.setPreferredSize(new Dimension(500,110));
 //		sidePanel.setBorder(new LineBorder(Color.BLACK,3));
 		sidePanel.setLayout(new BoxLayout(sidePanel, BoxLayout.PAGE_AXIS));
@@ -272,11 +309,11 @@ public class MainFrame extends JFrame{
 		            try{
 		            for (File file : droppedFiles) {
 		            	Files.walk(Paths.get(file.getPath()+"")).forEach(filePath -> {
-						    if (Files.isRegularFile(filePath) && (filePath+"").contains(".pdf") && !(filePath+"").contains("MS")) {
+						    if (Files.isRegularFile(filePath) && (filePath+"").contains(".pdf") && !(filePath+"").contains("MS") && !(filePath+"").contains("ER")) {
 						    	fp = filePath.toString();
 						    	String[] name = (filePath+"").substring((filePath+"").lastIndexOf("\\")+1, (filePath+"").indexOf(".pdf")).split("_");
 						    	QuestionPaper qp = new QuestionPaper();
-						    	qp.setLocation(filePath.toString());
+						    	qp.setQPPath(filePath.toString());
 						    	qp.setYear(name[1].replace(" ", ""));
 						    	qp.setQ(name[2]);
 						    	qp.setTopicName(name[3]);
@@ -309,7 +346,7 @@ public class MainFrame extends JFrame{
 		
 		//Label for year
 		JLabel j1Year = new JLabel("Year");
-		j1Year.setBackground(color1);
+//		j1Year.setBackground(color1);
 		j1Year.setFont(new Font("Calibri",Font.BOLD,20));
 		j1Year.setMaximumSize(new Dimension(700, 500));
 		j1Year.setAlignmentX(CENTER_ALIGNMENT);//aligns label itself
@@ -318,7 +355,7 @@ public class MainFrame extends JFrame{
 		
 		//Button to select/de-select all year options
 		JButton jbSelectYear = new JButton("Select All");
-		jbSelectYear.setBackground(color1);
+//		jbSelectYear.setBackground(color1);
 		jbSelectYear.addActionListener(new ActionListener(){
 
 			@Override
@@ -338,7 +375,7 @@ public class MainFrame extends JFrame{
 		
 		});
 		JButton jbDeselectYear = new JButton("Deselect All");
-		jbDeselectYear.setBackground(color1);
+//		jbDeselectYear.setBackground(color1);
 		jbDeselectYear.addActionListener(new ActionListener(){
 
 			@Override
@@ -368,13 +405,13 @@ public class MainFrame extends JFrame{
 		currentFilters = new ArrayList<String>();
 		currentFiltersYear = new ArrayList<String>();
 		JPanel pFilter = new JPanel();
-		pFilter.setBackground(color1);
+//		pFilter.setBackground(color1);
 		pFilter.setBorder(new LineBorder(Color.BLACK,1));
 		pFilter.setLayout(new BoxLayout(pFilter, BoxLayout.PAGE_AXIS));
 		jpYear = new JPanel(new GridLayout(4,2));
 		jpYear.setBorder(new LineBorder(Color.BLACK,1));
 		jpYear.setPreferredSize(new Dimension(500,5));
-		jpYear.setBackground(color1);
+//		jpYear.setBackground(color1);
 		
 		pFilter.add(new JScrollPane(jpYear));
 		jpTopics = new JPanel(new GridLayout(5,0));
@@ -382,7 +419,7 @@ public class MainFrame extends JFrame{
 		jpTopics.setPreferredSize(new Dimension(500,15));
 		
 		JLabel jlTopic = new JLabel("Topics");
-		jlTopic.setBackground(color1);
+//		jlTopic.setBackground(color1);
 		jlTopic.setFont(new Font("Calibri",Font.BOLD,20));
 		jlTopic.setAlignmentX(CENTER_ALIGNMENT);//aligns label itself
 		jlTopic.setHorizontalAlignment(SwingConstants.CENTER);//aligns text inside the label
@@ -392,7 +429,7 @@ public class MainFrame extends JFrame{
 		
 		//Button to select/de-select all TOPIC options
 		JButton jbSelectTopics = new JButton("Select All");
-		jbSelectTopics.setBackground(color1);
+//		jbSelectTopics.setBackground(color1);
 		jbSelectTopics.addActionListener(new ActionListener(){
 
 			@Override
@@ -412,7 +449,7 @@ public class MainFrame extends JFrame{
 		
 		});
 		JButton jbDeselectTopics = new JButton("Deselect All");
-		jbDeselectTopics.setBackground(color2);
+//		jbDeselectTopics.setBackground(color2);
 		jbDeselectTopics.addActionListener(new ActionListener(){
 
 			@Override
@@ -432,7 +469,7 @@ public class MainFrame extends JFrame{
 		
 		});
 		JPanel jpSelectTopics = new JPanel();
-		jpSelectTopics.setBackground(color1);
+//		jpSelectTopics.setBackground(color1);
 		jpSelectTopics.add(jbSelectTopics);
 		jpSelectTopics.add(jbDeselectTopics);
 		jpSelectTopics.setMaximumSize(new Dimension(200,10));
@@ -461,8 +498,8 @@ public class MainFrame extends JFrame{
 					qpCurrentlyShowing = qp;
 					jlcurrentPDF.setText(qp.toString());
 					jlcurrentPDFMS.setText(qp.toString());
-					setup(qp.getLocation());
-					setupMS(qp.getLocation().substring(0, qp.getLocation().lastIndexOf("Questions\\")) +"Questions\\MS_"+qp.getYear().replace(" ", "")+"_"+qp.getQ()+".pdf");
+					setup(qp.getQPPath());
+					setupMS(qp.getQPPath().substring(0, qp.getQPPath().lastIndexOf("Questions\\")) +"Questions\\MS_"+qp.getYear().replace(" ", "")+"_"+qp.getQ()+".pdf");
 					currentIndex = 1;
 					currentIndexMS = 1;
 					jlPageCount.setText("Current Page: "+currentIndex+"/"+pdffile.getNumPages());
@@ -514,8 +551,8 @@ public class MainFrame extends JFrame{
 					if(jListAvailable.getSelectedValue() != null){
 					jlcurrentPDF.setText(qp.toString());
 					jlcurrentPDFMS.setText(qp.toString());
-					setup(qp.getLocation());
-					setupMS(qp.getLocation().substring(0, qp.getLocation().lastIndexOf("Questions\\")) +"Questions\\MS_"+qp.getYear().replace(" ", "")+"_"+qp.getQ()+".pdf");
+					setup(qp.getQPPath());
+					setupMS(qp.getQPPath().substring(0, qp.getQPPath().lastIndexOf("Questions\\")) +"Questions\\MS_"+qp.getYear().replace(" ", "")+"_"+qp.getQ()+".pdf");
 					currentIndex = 1;
 					currentIndexMS = 1;
 					jlPageCount.setText("Current Page: "+currentIndex+"/"+pdffile.getNumPages());
@@ -575,127 +612,136 @@ public class MainFrame extends JFrame{
 		sidePanel.add(jlAvailable);
 		sidePanel.add(jpAddAll);
 		sidePanel.add(new JScrollPane(jListAvailable));
-		
-		
-		
-		
-		
-		
-		
 		sidePanel.setPreferredSize(new Dimension(600,200));
 	}
 	
-	public void makeQP(String fileName,boolean shouldPrint){
-		new PaperReader().createFolder(fileName);
+	public String getEPPath(String fileName,String type){
+		String filePath = System.getProperty("user.home")+"\\Desktop\\"+fileName+"\\"+fileName;
+		if(type.equalsIgnoreCase("QP")){
+			filePath += "_QP.pdf";
+		}
+		if(type.equalsIgnoreCase("MS")){
+			filePath += "_MS.pdf";
+		}
+		if(type.equalsIgnoreCase("ER")){
+			filePath += "_ER.pdf";
+		}
+		return filePath;
 		
-		PDFMergerUtility mu = new PDFMergerUtility();
-		for(int i = 0;i < lmSelected.size();i++){
-			QuestionPaper qp = (QuestionPaper)lmSelected.getElementAt(i);
-			try {
-				new CreateQuestionFront().makePaper(qp, i+1,"");
-			} catch (COSVisitorException | IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			mu.addSource(System.getProperty("user.home")+"\\Desktop\\CACHE\\"+(i+1)+".pdf");
-			mu.addSource(qp.getLocation());
-			try {
-				if(i != (lmSelected.size() - 1)){
-
-				int pageCount = getPageCount(System.getProperty("user.home")+"\\Desktop\\CACHE\\"+(i+1)+".pdf")+
-						getPageCount(qp.getLocation());
-				if((pageCount % 2) == 0){
-					mu.addSource(this.getClass().getResourceAsStream("/blank.pdf"));
-
-//					mu.addSource(System.getProperty("user.home")+"\\Desktop"+"\\blank.pdf");
-				}
-				}
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				JOptionPane.showMessageDialog(null, e.getMessage());
-				e.printStackTrace();
-			}
-		}		
-		mu.setDestinationFileName(System.getProperty("user.home")+"\\Desktop\\"+fileName+"\\"+fileName+"_QP.pdf");
-				
-		try {
-			mu.mergeDocuments();
-		} catch (COSVisitorException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		makeMS(fileName,System.getProperty("user.home")+"\\Desktop\\"+fileName);
-		if(!shouldPrint){
-			JOptionPane.showMessageDialog(null, "PDF Saved to "+System.getProperty("user.home")+"\\Desktop\\"+fileName);
-
-		}else{
-			JOptionPane.showMessageDialog(null, "EXAM PACK HAS BEEN SENT TO PRINT");
-
-		}
-
 	}
-	
-	public void makeQP(String fileName,int option){
+	public void makePaper(String fileName) throws COSVisitorException, IOException{
+		///Makes folder to store papers
 		new PaperReader().createFolder(fileName);
+		new PaperReader().createFolder("CACHE");
+		
+		//Creates a front page creator object
+		CreateQuestionFront front = new CreateQuestionFront();
+		
+		//String to hold destination of pack
+		String output = System.getProperty("user.home")+"\\Desktop\\"+fileName+"\\"+fileName;
+		
+		//Creates QP Pack
 		if(jcbQP.isSelected()){
+			System.out.println("Question Paper selected");
 			PDFMergerUtility mu = new PDFMergerUtility();
 			for(int i = 0;i < lmSelected.size();i++){
+				//Grabs questionPaper
 				QuestionPaper qp = (QuestionPaper)lmSelected.getElementAt(i);
-				try {
-					new CreateQuestionFront().makePaper(qp, i+1,"");
-				} catch (COSVisitorException | IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				mu.addSource(System.getProperty("user.home")+"\\Desktop\\CACHE\\"+(i+1)+".pdf");
-				mu.addSource(qp.getLocation());
-				try {
-					if(i != (lmSelected.size() - 1)){
-
-					int pageCount = getPageCount(System.getProperty("user.home")+"\\Desktop\\CACHE\\"+(i+1)+".pdf")+
-							getPageCount(qp.getLocation());
-					if(!((pageCount % 2) == 0)){
-						mu.addSource(this.getClass().getResourceAsStream("/blank.pdf"));
-//						mu.addSource(System.getProperty("user.home")+"\\Desktop"+"\\blank.pdf");
-					}
-					}
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-					JOptionPane.showMessageDialog(null, e.getMessage());
-
-				}
-			}		
-			mu.setDestinationFileName(System.getProperty("user.home")+"\\Desktop\\"+fileName+"\\"+fileName+"_QP.pdf");
-					
-			try {
-				mu.mergeDocuments();
-			} catch (COSVisitorException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			
-			if(jcbMS.isSelected()){
-				makeMS(fileName,System.getProperty("user.home")+"\\Desktop\\"+fileName);
-				JOptionPane.showMessageDialog(null, "Question and MarkScheme Saved to "+System.getProperty("user.home")+"\\Desktop\\"+fileName);
 				
-			}else{
-				JOptionPane.showMessageDialog(null, "Question pack saved to "+System.getProperty("user.home")+"\\Desktop\\"+fileName);
+				//Creates and adds Question Paper front page
+				String frontFilePath = front.makePaper(qp, i + 1, "QP");
+				mu.addSource(frontFilePath);
+				
+				//Adds actual questionpaper
+				mu.addSource(qp.getQPPath());
+				
+				//Adds blank page if needs be
+				///First checks if it isn't the last page
+				if(i != (lmSelected.size() - 1)){
+					int pageCount = getPageCount(frontFilePath)+getPageCount(qp.getQPPath());
+					//If total page number is odd, adds a blank page
+					if((pageCount % 2) != 0){
+						mu.addSource(this.getClass().getResourceAsStream("/blank.pdf"));
+					}
+				}
+				
+				
 			}
-			openAdobe(System.getProperty("user.home")+"\\Desktop\\"+fileName+"\\"+fileName+"_QP.pdf");
-		}else{
-			if(jcbMS.isSelected()){
-				makeMS(fileName,System.getProperty("user.home")+"\\Desktop\\"+fileName);
-				JOptionPane.showMessageDialog(null, "MarkScheme Saved to "+System.getProperty("user.home")+"\\Desktop\\"+fileName);
-				openAdobe(System.getProperty("user.home")+"\\Desktop\\"+fileName+"\\"+fileName+"_MS.pdf");
-			}
+			//Saves pack to desktop
+			mu.setDestinationFileName(output+"_QP.pdf");
+			mu.mergeDocuments();
+			
+			System.out.println("Succesfully created question pack");
 		}
+		
+		if(jcbMS.isSelected()){
+			System.out.println("Mark Scheme selected");
+
+			PDFMergerUtility mu = new PDFMergerUtility();
+			for(int i = 0;i < lmSelected.size();i++){
+				//Grabs questionPaper
+				QuestionPaper qp = (QuestionPaper)lmSelected.getElementAt(i);
+				
+				//Creates and adds Question Paper front page
+				String frontFilePath = front.makePaper(qp, i + 1, "MS");
+				mu.addSource(frontFilePath);
+				
+				//Adds actual mark scheme
+				mu.addSource(qp.getMSPath());
+				
+				//Adds blank page if needs be
+				///First checks if it isn't the last page
+				if(i != (lmSelected.size() - 1)){
+					int pageCount = getPageCount(frontFilePath)+getPageCount(qp.getQPPath());
+					//If total page number is odd, adds a blank page
+					if((pageCount % 2) != 0){
+						mu.addSource(this.getClass().getResourceAsStream("/blank.pdf"));
+					}
+				}
+				
+				
+			}
+			System.out.println("Succesfully created mark Scheme  pack");
+
+			//Saves pack to desktop
+			mu.setDestinationFileName(output+"_MS.pdf");
+			mu.mergeDocuments();
+			
+		}
+		if(jcbER.isSelected()){
+			System.out.println("Examiners Report selected");
+
+			PDFMergerUtility mu = new PDFMergerUtility();
+			for(int i = 0;i < lmSelected.size();i++){
+				//Grabs questionPaper
+				QuestionPaper qp = (QuestionPaper)lmSelected.getElementAt(i);
+				
+				//Creates and adds Question Paper front page
+				String frontFilePath = front.makePaper(qp, i + 1, "ER");
+				mu.addSource(frontFilePath);
+				
+				//Adds actual mark scheme
+				mu.addSource(qp.getERPath());
+				
+				//Adds blank page if needs be
+				///First checks if it isn't the last page
+				if(i != (lmSelected.size() - 1)){
+					int pageCount = getPageCount(frontFilePath)+getPageCount(qp.getQPPath());
+					//If total page number is odd, adds a blank page
+					if((pageCount % 2) != 0){
+						mu.addSource(this.getClass().getResourceAsStream("/blank.pdf"));
+					}
+				}
+				
+				
+			}
+			System.out.println("Succesfully created examiners report pack");
+			//Saves pack to desktop
+			mu.setDestinationFileName(output+"_ER.pdf");
+			mu.mergeDocuments();
+		}
+		
+		
 	}
 	
 	public void openAdobe(String filepath){
@@ -709,51 +755,7 @@ public class MainFrame extends JFrame{
 		}
 	}
 	
-	public void makeMS(String fileName,String fileDirec){
-		PDFMergerUtility mu = new PDFMergerUtility();
-		for(int i = 0;i < lmSelected.size();i++){
-			QuestionPaper qp = (QuestionPaper)lmSelected.getElementAt(i);
-			System.out.println(qp.getLocation());
-			String filePath = qp.getLocation().substring(0, qp.getLocation().lastIndexOf("Questions\\")) +"Questions\\MS_"+qp.getYear().replace(" ", "")+"_"+qp.getQ()+".pdf";
-			System.out.println("Mark Scheme : "+filePath);
-			try {
-				new CreateQuestionFront().makePaper(qp, i+1,"MS");
-			} catch (COSVisitorException | IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			mu.addSource(System.getProperty("user.home")+"\\Desktop\\CACHE\\"+(i+1)+"_MS.pdf");
-			mu.addSource(filePath);
-			try {
-				if(i != (lmSelected.size() - 1)){
-				int pageCount = getPageCount(System.getProperty("user.home")+"\\Desktop\\CACHE\\"+(i+1)+"_MS.pdf")+
-						getPageCount(filePath);
-				if(!((pageCount % 2) == 0)){
-					mu.addSource(this.getClass().getResourceAsStream("/blank.pdf"));
 
-//					mu.addSource(System.getProperty("user.home")+"\\Desktop"+"\\blank.pdf");
-				}
-				}
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				JOptionPane.showMessageDialog(null, e.getMessage());
-				e.printStackTrace();
-			}
-		}
-		mu.setDestinationFileName(fileDirec+"\\"+fileName+"_MS.pdf");
-				
-		try {
-			mu.mergeDocuments();
-		} catch (COSVisitorException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-//		openAdobe(fileDirec+"\\"+fileName+"_MS.pdf");
-	}
-	
 	public void addFiles(){
 		topicNames = new ArrayList<String>();
 		yearList = new ArrayList<String>();
@@ -817,7 +819,7 @@ public class MainFrame extends JFrame{
 				
 			});
 			tempCheck.setSelected(true);
-			tempCheck.setBackground(color1);
+//			tempCheck.setBackground(color1);
 			jcbArrayYear.add(tempCheck);
 			jpYear.add(tempCheck);
 		}
@@ -828,7 +830,7 @@ public class MainFrame extends JFrame{
 	public void rightPane(){
 		//JPANEL FOR RIGHT SIDE
 		JLabel jlSelected = new JLabel("Selected Questions",SwingConstants.LEFT);
-		jlSelected.setBackground(color1);
+//		jlSelected.setBackground(color1);
 		jlSelected.setBorder(new LineBorder(Color.black,1));
 		jlSelected.setFont(new Font("Calibri",Font.BOLD,20));
 		jlSelected.setMaximumSize(new Dimension(700, 500));
@@ -839,7 +841,7 @@ public class MainFrame extends JFrame{
 		//List of selected question papers
 		lmSelected = new DefaultListModel();
 		JList jListSelected = new JList(lmSelected);
-		jListSelected.setBackground(color2);
+//		jListSelected.setBackground(color2);
 		jListSelected.setCellRenderer(new JListModern());
 		jListSelected.setFont(new Font("Calibri",Font.PLAIN,20));
 		jListSelected.setBorder(new LineBorder(Color.BLACK,1));
@@ -858,8 +860,8 @@ public class MainFrame extends JFrame{
 					System.out.println("ONE CLICK " +qp);
 					jlcurrentPDF.setText(qp.toString());
 					jlcurrentPDFMS.setText(qp.toString());
-					setup(qp.getLocation());
-					setupMS(qp.getLocation().substring(0, qp.getLocation().lastIndexOf("Questions\\")) +"Questions\\MS_"+qp.getYear().replace(" ", "")+"_"+qp.getQ()+".pdf");
+					setup(qp.getQPPath());
+					setupMS(qp.getQPPath().substring(0, qp.getQPPath().lastIndexOf("Questions\\")) +"Questions\\MS_"+qp.getYear().replace(" ", "")+"_"+qp.getQ()+".pdf");
 					currentIndex = 1;
 					currentIndexMS = 1;
 					jlPageCount.setText("Current Page: "+currentIndex+"/"+pdffile.getNumPages());
@@ -913,8 +915,8 @@ public class MainFrame extends JFrame{
 					if(jListSelected.getSelectedValue() != null){
 					jlcurrentPDF.setText(qp.toString());
 					jlcurrentPDFMS.setText(qp.toString());
-					setup(qp.getLocation());
-					setupMS(qp.getLocation().substring(0, qp.getLocation().lastIndexOf("Questions\\")) +"Questions\\MS_"+qp.getYear().replace(" ", "")+"_"+qp.getQ()+".pdf");
+					setup(qp.getQPPath());
+					setupMS(qp.getQPPath().substring(0, qp.getQPPath().lastIndexOf("Questions\\")) +"Questions\\MS_"+qp.getYear().replace(" ", "")+"_"+qp.getQ()+".pdf");
 					currentIndex = 1;
 					currentIndexMS = 1;
 					jlPageCount.setText("Current Page: "+currentIndex+"/"+pdffile.getNumPages());
@@ -958,7 +960,7 @@ public class MainFrame extends JFrame{
 		
 		JPanel rightPane = new JPanel();
 		rightPane.setLayout(new BoxLayout(rightPane,BoxLayout.PAGE_AXIS));
-		rightPane.setBackground(color1);
+//		rightPane.setBackground(color1);
 		
 		
 		
@@ -970,7 +972,7 @@ public class MainFrame extends JFrame{
 		
 		//JPanel for re-arranging selected papers
 		JPanel jpRearrange = new JPanel();
-		jpRearrange.setBackground(color1);
+//		jpRearrange.setBackground(color1);
 		jpRearrange.setBorder(new LineBorder(Color.black,1));
 		jpRearrange.setAlignmentX(CENTER_ALIGNMENT);
 		jpRearrange.setMaximumSize(new Dimension(500,40));
@@ -1061,7 +1063,7 @@ public class MainFrame extends JFrame{
 
 		
 		JButton clearSelection = new JButton("Clear Selection");
-		clearSelection.setBackground(color1);
+//		clearSelection.setBackground(color1);
 		clearSelection.setFont(new Font("Calibri",Font.BOLD,20));
 		clearSelection.setForeground(Color.red);
 		clearSelection.setAlignmentX(CENTER_ALIGNMENT);
@@ -1079,7 +1081,7 @@ public class MainFrame extends JFrame{
 		rightPane.add(clearSelection);
 		
 		jlTotalMarks = new JLabel("Total Marks: ");
-		jlTotalMarks.setBackground(color1);
+//		jlTotalMarks.setBackground(color1);
 		jlTotalMarks.setBorder(new LineBorder(Color.black,1));
 		jlTotalMarks.setFont(new Font("Calibri",Font.BOLD,20));
 		jlTotalMarks.setMaximumSize(new Dimension(700, 500));
@@ -1095,29 +1097,29 @@ public class MainFrame extends JFrame{
 		JLabel jlOptions = new JLabel("Options: ");
 		jlOptions.setOpaque(false);
 		jlOptions.setFont(new Font("Calibri",Font.BOLD,20));
-//		jcbOptions = new JComboBox(new String[]{"Questions","Mark Scheme","Question and Mark Scheme"});
-//		jcbOptions.setFont(new Font("Calibri",Font.BOLD,20));
-//		jpOptions.add(jlOptions,BorderLayout.WEST);
-//		jpOptions.add(jcbOptions,BorderLayout.CENTER);
-		
+
 		jcbQP = new JCheckBox("Question Paper");
-		jcbQP.setFont(new Font("Calibri",Font.PLAIN,20));
+		jcbQP.setFont(new Font("Calibri",Font.PLAIN,15));
 		jcbQP.setOpaque(false);
 		jcbMS = new JCheckBox("Mark Scheme");
 		jcbMS.setOpaque(false);
-		jcbMS.setFont(new Font("Calibri",Font.PLAIN,20));
+		jcbMS.setFont(new Font("Calibri",Font.PLAIN,15));
+		jcbER = new JCheckBox("Examiners Report");
+		jcbER.setOpaque(false);
+		jcbER.setFont(new Font("Calibri",Font.PLAIN,15));
 
 		
 		jpOptions.add(jlOptions);
 		jpOptions.add(jcbQP);
 		jpOptions.add(jcbMS);
+		jpOptions.add(jcbER);
 		
 		
 		
 		
 		
 		
-		rightPane.setBackground(color1);
+//		rightPane.setBackground(color1);
 		rightPane.add(jpOptions);
 		rightPane.add(bottomPanel);
 	}
@@ -1148,7 +1150,6 @@ public class MainFrame extends JFrame{
 				}
 			}
 		}
-		ArrayList<Integer> indexes = new ArrayList<Integer>();
 		ArrayList<QuestionPaper> toAddBack = new ArrayList<QuestionPaper>();
 		
 		for(int j = 0; j < lmAvailable.size();j++){
@@ -1196,11 +1197,6 @@ public class MainFrame extends JFrame{
 		jlcurrentPDFMS.setAlignmentX(CENTER_ALIGNMENT);//aligns label itself
 		jlcurrentPDFMS.setHorizontalAlignment(SwingConstants.CENTER);//aligns text inside the label
 		
-		
-//		mainPanel.add(jlcurrentPDF,BorderLayout.NORTH);
-		
-		
-		
 		//To hold both the QP and MS viewer
 		jtpViewer = new JTabbedPane();
 		jtpViewer.setFont(new Font("Calibri",Font.BOLD,20));
@@ -1212,13 +1208,8 @@ public class MainFrame extends JFrame{
 		jtpViewer.addTab("Question Paper", jpQP);
 		jtpViewer.addTab("Mark Scheme", jpMS);
 		
-		
-		
 		//MS Paper Viewer
 		JPanel jpViewerMS = new JPanel(new BorderLayout());
-		
-		
-		
 		
 		//FOR EXTERNAL VIEWER
 		panelExternal = new PagePanel();
@@ -1228,8 +1219,6 @@ public class MainFrame extends JFrame{
 		
 		
 		///////
-		
-		
 		panelMS = new PagePanel();
 		panelMS.setBorder(new LineBorder(Color.BLUE,3));
 		panelMS.setFocusable(true);
@@ -1335,7 +1324,7 @@ public class MainFrame extends JFrame{
 				int confirm = JOptionPane.showConfirmDialog(null, "Are you sure you want to print?");
 				if(confirm == JOptionPane.YES_OPTION){
 					try {
-						new PrintPdf().printPDF(qpCurrentlyShowing.getLocation().substring(0, qpCurrentlyShowing.getLocation().lastIndexOf("Questions\\")) +"Questions\\MS_"+qpCurrentlyShowing.getYear().replace(" ", "")+"_"+qpCurrentlyShowing.getQ()+".pdf", qpCurrentlyShowing.toString());
+						new PrintPdf().printPDF(qpCurrentlyShowing.getQPPath().substring(0, qpCurrentlyShowing.getQPPath().lastIndexOf("Questions\\")) +"Questions\\MS_"+qpCurrentlyShowing.getYear().replace(" ", "")+"_"+qpCurrentlyShowing.getQ()+".pdf", qpCurrentlyShowing.toString());
 					} catch (PrinterException e1) {
 						// TODO Auto-generated catch block
 						e1.printStackTrace();
@@ -1359,7 +1348,7 @@ public class MainFrame extends JFrame{
 			public void actionPerformed(ActionEvent e) {
 				if (Desktop.isDesktopSupported()) {
 				    try {
-				        File myFile = new File(qpCurrentlyShowing.getLocation().substring(0, qpCurrentlyShowing.getLocation().lastIndexOf("Questions\\")) +"Questions\\MS_"+qpCurrentlyShowing.getYear().replace(" ", "")+"_"+qpCurrentlyShowing.getQ()+".pdf");
+				        File myFile = new File(qpCurrentlyShowing.getQPPath().substring(0, qpCurrentlyShowing.getQPPath().lastIndexOf("Questions\\")) +"Questions\\MS_"+qpCurrentlyShowing.getYear().replace(" ", "")+"_"+qpCurrentlyShowing.getQ()+".pdf");
 				        Desktop.getDesktop().open(myFile);
 				    } catch (IOException ex) {
 				        // no application registered for PDFs
@@ -1524,7 +1513,7 @@ public class MainFrame extends JFrame{
 				int confirm = JOptionPane.showConfirmDialog(null, "Are you sure you want to print?");
 				if(confirm == JOptionPane.YES_OPTION){
 					try {
-						new PrintPdf().printPDF(qpCurrentlyShowing.getLocation(), qpCurrentlyShowing.toString());
+						new PrintPdf().printPDF(qpCurrentlyShowing.getQPPath(), qpCurrentlyShowing.toString());
 					} catch (PrinterException e1) {
 						// TODO Auto-generated catch block
 						e1.printStackTrace();
@@ -1548,7 +1537,7 @@ public class MainFrame extends JFrame{
 			public void actionPerformed(ActionEvent e) {
 				if (Desktop.isDesktopSupported()) {
 				    try {
-				        File myFile = new File(qpCurrentlyShowing.getLocation());
+				        File myFile = new File(qpCurrentlyShowing.getQPPath());
 				        Desktop.getDesktop().open(myFile);
 				    } catch (IOException ex) {
 				        // no application registered for PDFs
@@ -1601,9 +1590,6 @@ public class MainFrame extends JFrame{
 		jpQP.add(jpViewerQP);
 		jpMS.add(jpViewerMS);
 		
-		
-//		jpViewer.add(jlPageCount,BorderLayout.NORTH);
-//        mainPanel.add(jpViewerQP,BorderLayout.CENTER);
 		mainPanel.add(jtpViewer,BorderLayout.CENTER);
 	}
 	
@@ -1688,7 +1674,7 @@ public class MainFrame extends JFrame{
         PDFPage page = pdffile.getPage(0);
         panel.showPage(page);
         panelExternal.showPage(page);
-        
+        raf.close();
 		}catch(Exception e){
 			System.out.println("ERROR SHOWING PDF");
 		}
@@ -1702,6 +1688,8 @@ public class MainFrame extends JFrame{
 	        FileChannel channel = raf.getChannel();
 	        ByteBuffer buf = channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size());
 	        PDFFile pfile = new PDFFile(buf);
+	        raf.close();
+
 	        return pfile.getNumPages();
 	       
 	}
@@ -1720,19 +1708,14 @@ public class MainFrame extends JFrame{
         PDFPage page = pdffileMS.getPage(0);
         panelMS.showPage(page);
         panelExternalMS.showPage(page);
+        raf.close();
+
 		}catch(Exception e){
 			System.out.println("ERROR SHOWING PDF");
 		}
         
 	}
 	
-
-	public static void main(String[] args) {
-//		showOnScreen(1,new MainFrame());
-		new MainFrame();
-//		new MainFrame();
-
-	}
 	
 	public static void showOnScreen( int screen, JFrame frame ) {
 	    GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
@@ -1746,23 +1729,5 @@ public class MainFrame extends JFrame{
 	    }
 	}
 	
-//	public static void showOnScreen( int screen, JFrame frame )
-//	{
-//	    GraphicsEnvironment ge = GraphicsEnvironment
-//	        .getLocalGraphicsEnvironment();
-//	    GraphicsDevice[] gs = ge.getScreenDevices();
-//	    if( screen > -1 && screen < gs.length )
-//	    {
-//	        gs[screen].setFullScreenWindow( frame );
-//	    }
-//	    else if( gs.length > 0 )
-//	    {
-//	        gs[0].setFullScreenWindow( frame );
-//	    }
-//	    else
-//	    {
-//	        throw new RuntimeException( "No Screens Found" );
-//	    }
-//	}
 
 }

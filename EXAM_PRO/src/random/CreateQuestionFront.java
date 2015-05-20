@@ -14,24 +14,24 @@ import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import data.QuestionPaper;
 
 public class CreateQuestionFront {
-	
-	public static void main(String[] args) throws COSVisitorException, IOException{
-		QuestionPaper qp = new QuestionPaper();
-		qp.setQ("Q5");
-		qp.setTopicName("Nomenclature");
-		qp.setTotalMarks(15);
-		qp.setYear("Jan10");
-		makePaper(qp,4,"");
-	}
 
-	public static void makePaper(QuestionPaper qp,int n,String ms) throws IOException, COSVisitorException {
+	public static String makePaper(QuestionPaper qp,int n,String type) throws IOException, COSVisitorException {
 //		String outputFileName = getClass().getResource("/blank.pdf").getPath();
-		String outputFileName = System.getProperty("user.home")+"\\Desktop\\CACHE\\"+n+".pdf";
-		if(ms.equals("MS")){
-			outputFileName = System.getProperty("user.home")+"\\Desktop\\CACHE\\"+n+"_MS.pdf";
+		String outputFileName = "";
+		String title = "Question "+n;
+		
+		if(type.equals("QP")){
+			outputFileName = System.getProperty("user.home")+"\\Desktop\\CACHE\\"+n+".pdf";
 		}
-		// if (args.length > 0)
-		// outputFileName = args[0];
+		if(type.equals("MS")){
+			outputFileName = System.getProperty("user.home")+"\\Desktop\\CACHE\\"+n+"_MS.pdf";
+			title += " MS";
+		}
+		if(type.equals("ER")){
+			outputFileName = System.getProperty("user.home")+"\\Desktop\\CACHE\\"+n+"_ER.pdf";
+			title += " ER";
+		}
+		
 
 		// Create a document and add a page to it
 		PDDocument document = new PDDocument();
@@ -42,31 +42,31 @@ public class CreateQuestionFront {
 		document.addPage(page1);
 
 		// Create a new font object selecting one of the PDF base fonts
-		// PDFont fontPlain = PDType1Font.HELVETICA;
 		PDFont fontPlain = PDType1Font.COURIER;
 		PDFont fontBold = PDType1Font.COURIER_BOLD;
 		PDFont fontItalic = PDType1Font.COURIER_OBLIQUE;
 		PDFont fontMono = PDType1Font.COURIER;
 
-		// Start a new content stream which will "hold" the to be created
-		// content
+		// Start a new content stream which will "hold" the to be created content
 		PDPageContentStream cos = new PDPageContentStream(document, page1);
 
 		int line = 5;
 
-		// Define a text content stream using the selected font, move the cursor
-		// and draw some text
+		// Adds big gap so text is centered
 		cos.beginText();
 		cos.setFont(fontItalic, 30);
 		cos.moveTextPositionByAmount(rect.getWidth() / 4, 1000 - 50 * (++line));
 		cos.drawString("");
 		cos.endText();
 		
+		
+		
+		
 
 		int fontSize = 50; // Or whatever font size you want.
 		float titleWidth;
 		
-		if(ms.equals("MS")){
+		if(type.equals("MS")){
 			titleWidth = fontPlain.getStringWidth("Question "+n+" MS") / 1000
 					* fontSize;
 		}else{
@@ -76,49 +76,38 @@ public class CreateQuestionFront {
 		// Question Title
 		cos.beginText();
 		cos.setFont(fontPlain, fontSize);
-		cos.moveTextPositionByAmount(
-				(page1.getMediaBox().getWidth() - titleWidth) / 2,
-				rect.getHeight() - 50 * (++line));
-		if(ms.equals("MS")){
-			cos.drawString("Question "+n+" MS");
-		}else{
-			cos.drawString("Question "+n);
-
-		}
+		cos.moveTextPositionByAmount((page1.getMediaBox().getWidth() - titleWidth) / 2,rect.getHeight() - 50 * (++line));
+		cos.drawString(title);
 		cos.endText();
-
+		
+		///Topic Name
 		fontSize = 18; // Or whatever font size you want.
 		titleWidth = fontPlain.getStringWidth(qp.getTopicName()) / 1000 * fontSize;
 
 		cos.beginText();
 		cos.setFont(fontPlain, 18);
-		cos.moveTextPositionByAmount(
-				(page1.getMediaBox().getWidth() - titleWidth) / 2,
-				rect.getHeight() - 50 * (++line));
+		cos.moveTextPositionByAmount((page1.getMediaBox().getWidth() - titleWidth) / 2,rect.getHeight() - 50 * (++line));
 		cos.drawString(qp.getTopicName());
 		cos.endText();
 
 		
-
+		///Total Marks
 		fontSize = 22; // Or whatever font size you want.
-		titleWidth = fontPlain.getStringWidth("Total Marks: __/"+qp.getTotalMarks()) / 1000
-				* fontSize;
+		titleWidth = fontPlain.getStringWidth("Total Marks: __/"+qp.getTotalMarks()) / 1000* fontSize;
 
 		cos.beginText();
 		cos.setFont(fontMono, fontSize);
 		cos.setNonStrokingColor(Color.BLUE);
-		cos.moveTextPositionByAmount(
-				(page1.getMediaBox().getWidth() - titleWidth) / 2,
-				rect.getHeight() - 50 * (++line));
+		cos.moveTextPositionByAmount((page1.getMediaBox().getWidth() - titleWidth) / 2,rect.getHeight() - 50 * (++line));
 		cos.drawString("Total Marks: __/"+qp.getTotalMarks());
 		cos.endText();
 		
 		
 		
-		///YEAR
+		///YEAR of paper
 		fontSize = 12; // Or whatever font size you want.
 		titleWidth = fontPlain.getStringWidth(qp.getYear()+" ("+qp.getQ()+")") / 1000 * fontSize;
-
+		
 		cos.beginText();
 		cos.setFont(fontBold, fontSize);
 		cos.moveTextPositionByAmount(
@@ -173,6 +162,8 @@ public class CreateQuestionFront {
 		// Save the results and ensure that the document is properly closed:
 		document.save(outputFileName);
 		document.close();
+		
+		return outputFileName;
 
 	}
 

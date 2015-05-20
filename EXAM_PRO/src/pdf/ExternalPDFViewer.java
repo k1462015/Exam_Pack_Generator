@@ -58,6 +58,8 @@ public class ExternalPDFViewer {
         // show the first page
         page = pdffile.getPage(0);
         panel.showPage(page);
+        raf.close();
+
 		}catch(Exception e){
 			System.out.println("ERROR SHOWING PDF");
 		}

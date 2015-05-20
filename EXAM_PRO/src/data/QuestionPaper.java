@@ -1,16 +1,16 @@
 package data;
 
 public class QuestionPaper {
-	private String location;
+	private String filePath;
 	private String year;
 	private String q;
 	private String topicName;
 	private int totalMarks;
-	public String getLocation() {
-		return location;
+	public String getQPPath() {
+		return filePath;
 	}
-	public void setLocation(String location) {
-		this.location = location;
+	public void setQPPath(String filePath) {
+		this.filePath = filePath;
 	}
 	public String getYear() {
 		return year;
@@ -41,6 +41,13 @@ public class QuestionPaper {
 		return topicName +"|"+year+"|"+q+"|"+totalMarks+" marks";
 	}
 	
+	public String getMSPath(){
+		return this.getQPPath().substring(0, this.getQPPath().lastIndexOf("Questions\\")) +"Questions\\MS_"+this.getYear().replace(" ", "")+"_"+this.getQ()+".pdf";
+	}
+	
+	public String getERPath(){
+		return this.getQPPath().substring(0, this.getQPPath().lastIndexOf("Questions\\")) +"Questions\\ER_"+this.getYear().replace(" ", "")+"_"+this.getQ()+".pdf";
+	}
 	
 
 }

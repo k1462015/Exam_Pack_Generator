@@ -13,5 +13,7 @@
 	<classpathentry kind="var" path="preflight"/>
 	<classpathentry kind="var" path="PDFRenderer"/>
 	<classpathentry kind="var" path="weblaf"/>
+	<classpathentry kind="var" path="controlsfx"/>
+	<classpathentry kind="var" path="OpenViewerFX"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
