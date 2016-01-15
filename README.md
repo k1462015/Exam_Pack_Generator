@@ -1,4 +1,4 @@
 # Exam_Pack_Generator
 Please note: Source code here is not the latest code. Will be updated soon.
 # Preview
-<img src="https://i.gyazo.com/b6a67676ba39c3cd34b36556211948bf.jpg" height="400px" width="700px"/>
+<img src="https://i.gyazo.com/31cf48cde2b1fd444d0f57f85097923c.gif" height="400px" width="700px"/>
